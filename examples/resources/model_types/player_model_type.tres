@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ModelType" load_steps=4 format=3 uid="uid://b556wun2wqhoe"]
+
+[ext_resource type="Script" uid="uid://c5cctkkcygkj8" path="res://addons/li_data_manager/examples/scripts/resource/player_model.gd" id="1_8be26"]
+[ext_resource type="Script" uid="uid://bf3cohk1etxvp" path="res://addons/li_data_manager/source/resource/model_type.gd" id="2_ktwej"]
+[ext_resource type="Resource" uid="uid://pv58vkywjgs8" path="res://addons/li_data_manager/examples/resources/table_types/player_table_type.tres" id="4_na36g"]
+
+[resource]
+script = ExtResource("2_ktwej")
+model_name = &"player"
+model_script = ExtResource("1_8be26")
+table = ExtResource("4_na36g")
+description = ""
+field_mappings = Dictionary[String, String]({
+"ID": "id"
+})
+default_values = Dictionary[String, Variant]({})

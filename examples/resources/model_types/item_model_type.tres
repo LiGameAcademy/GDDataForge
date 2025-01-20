@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ModelType" load_steps=4 format=3 uid="uid://bnsbjerbe0i0t"]
+
+[ext_resource type="Script" uid="uid://djpgu0hpdqk7m" path="res://addons/li_data_manager/examples/scripts/resource/item_model.gd" id="1_h70pn"]
+[ext_resource type="Script" uid="uid://bf3cohk1etxvp" path="res://addons/li_data_manager/source/resource/model_type.gd" id="2_j0iad"]
+[ext_resource type="Resource" uid="uid://dvhv2b2tc2sej" path="res://addons/li_data_manager/examples/resources/table_types/item_table_type.tres" id="4_j0iad"]
+
+[resource]
+script = ExtResource("2_j0iad")
+model_name = &"item"
+model_script = ExtResource("1_h70pn")
+table = ExtResource("4_j0iad")
+description = ""
+field_mappings = {}
+default_values = {}

@@ -1,0 +1,44 @@
+{
+	"sword_1": {
+		"id": "sword_1",
+		"name": "炎龙剑",
+		"type": "weapon",
+		"damage": 100,
+		"defense": 0,
+		"position": "@vector2:(10, 20)",
+		"icon": "@resource://addons/li_data_manager/examples/assets/sword.svg",
+		"properties": {
+			"fire_damage": 50,
+			"critical_rate": 0.2
+		},
+		"tags": ["武器", "剑", "火属性"]
+	},
+	"shield_1": {
+		"id": "shield_1",
+		"name": "寒冰盾",
+		"type": "shield",
+		"damage": 0,
+		"defense": 80,
+		"position": "@vector2:(30, 40)",
+		"icon": "@resource://addons/li_data_manager/examples/assets/shield.png",
+		"properties": {
+			"ice_defense": 40,
+			"block_rate": 0.3
+		},
+		"tags": ["防具", "盾", "冰属性"]
+	},
+	"staff_1": {
+		"id": "staff_1",
+		"name": "雷霆法杖",
+		"type": "weapon",
+		"damage": 150,
+		"defense": 20,
+		"position": "@vector2:(50, 60)",
+		"icon": "@resource://addons/li_data_manager/examples/assets/staff.png",
+		"properties": {
+			"lightning_damage": 80,
+			"magic_boost": 0.4
+		},
+		"tags": ["武器", "法杖", "雷属性"]
+	}
+}

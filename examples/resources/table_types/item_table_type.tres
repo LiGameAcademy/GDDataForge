@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="TableType" load_steps=2 format=3 uid="uid://dvhv2b2tc2sej"]
+
+[ext_resource type="Script" uid="uid://c65rwndbbr15i" path="res://addons/li_data_manager/source/resource/table_type.gd" id="1_3cjjf"]
+
+[resource]
+script = ExtResource("1_3cjjf")
+table_name = &"item"
+table_paths = Array[String](["res://addons/li_data_manager/examples/data_table/item_data.json"])
+description = ""
+primary_key = "ID"
+enable_cache = true
+validation_rules = {}
+cache = {}
+is_loaded = false
+metadata/_custom_type_script = ExtResource("1_3cjjf")

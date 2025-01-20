@@ -1,0 +1,6 @@
+ID,name,level,position,skills,properties,is_active,icon
+ID,名称,等级,位置,技能列表,属性值列表,是否激活,图标
+string,string,int,vector2,string[],dictionary,bool,resource
+player_1,英雄,10,"100, 200",剑刃*盾牌*闪电,"attack:100,defense:50,speed:60",1,"res://addons/li_data_manager/examples/assets/sword.svg"
+player_2,法师,8,"300, 400",火球*冰箭*闪电,"attack:50,defense:30,speed:60",0,
+player_3,战士,12,"500, 600",冲锋*旋风斩*格挡,"attack:150,defense:100,speed:70",1,
