@@ -1,4 +1,4 @@
-extends "res://addons/li_data_manager/source/data_loader.gd"
+extends "res://addons/GDDataForge/source/data_loader.gd"
 class_name JSONDatatableHelper
 
 ## 数据类型标记

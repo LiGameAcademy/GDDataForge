@@ -2,9 +2,9 @@ extends Node
 
 ## 数据表管理器
 
-const DataLoader = preload("res://addons/li_data_manager/source/data_loader.gd")
-const CsvLoader = preload("res://addons/li_data_manager/source/data_loader/csv_loader.gd")
-const JsonLoader = preload("res://addons/li_data_manager/source/data_loader/json_loader.gd")
+const DataLoader = preload("res://addons/GDDataForge/source/data_loader.gd")
+const CsvLoader = preload("res://addons/GDDataForge/source/data_loader/csv_loader.gd")
+const JsonLoader = preload("res://addons/GDDataForge/source/data_loader/json_loader.gd")
 
 ## 是否启用线程加载
 @export var enable_thread: bool = true

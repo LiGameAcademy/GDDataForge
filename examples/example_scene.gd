@@ -1,12 +1,12 @@
 extends Control
 
 ## 数据模型
-const ItemModel = preload("res://addons/li_data_manager/examples/scripts/resource/item_model.gd")
-const PlayerModel = preload("res://addons/li_data_manager/examples/scripts/resource/player_model.gd")
+const ItemModel = preload("res://addons/GDDataForge/examples/scripts/resource/item_model.gd")
+const PlayerModel = preload("res://addons/GDDataForge/examples/scripts/resource/player_model.gd")
 
 ## 数据表路径
-const TEST_CSV_PATH = "res://addons/li_data_manager/examples/data_table/test_data.csv"
-const TEST_JSON_PATH = "res://addons/li_data_manager/examples/data_table/test_data.json"
+const TEST_CSV_PATH = "res://addons/GDDataForge/examples/data_table/test_data.csv"
+const TEST_JSON_PATH = "res://addons/GDDataForge/examples/data_table/test_data.json"
 
 ## UI 组件
 @onready var test_output : RichTextLabel = %TestOutput
