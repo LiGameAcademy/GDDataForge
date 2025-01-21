@@ -1,4 +1,4 @@
-extends "res://addons/li_data_manager/source/data_loader.gd"
+extends "res://addons/GDDataForge/source/data_loader.gd"
 
 ## 数据类型处理器
 var _parsers : Dictionary[String, Callable] = {
