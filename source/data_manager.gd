@@ -43,14 +43,19 @@ func _notification(what: int) -> void:
 		_stop_loading_thread()
 
 ## 注册数据表加载器
+## [param type] 加载器类型
+## [param loader] 加载器
 func register_data_loader(type: String, loader: DataLoader) -> void:
 	_data_loader_factory[type] = loader
 
 ## 移除数据表加载器
+## [param type] 加载器类型
 func unregister_data_loader(type: String) -> void:
 	_data_loader_factory.erase(type)
 
 ## 获取数据表加载器
+## [param type] 加载器类型
+## [return] 加载器
 func get_data_loader(type: String) -> DataLoader:
 	return _data_loader_factory.get(type, null)
 
@@ -62,6 +67,10 @@ func clear_model_types() -> void:
 func clear_table_types() -> void:
 	_table_types.clear()
 
+## 加载数据表
+## [param table_type] 数据表类型
+## [param completed_callback] 完成回调
+## [return] 返回加载的数据表名字数组
 func load_data_table(table_type: TableType, completed_callback: Callable = Callable()) -> Dictionary:
 	if enable_thread:
 		# 异步加载
@@ -81,6 +90,11 @@ func load_data_table(table_type: TableType, completed_callback: Callable = Calla
 			completed_callback.call(table_type.table_name)
 		return table_type.cache
 
+## 批量加载数据表
+## [param table_types] 数据表类型数组
+## [param callback] 完成回调,返回加载的数据表
+## [param progress_callback] 进度回调,返回当前加载的数据表数和总数据表数
+## [return] 返回加载的数据表名字数组
 func load_data_table_batch(
 		table_types: Array[TableType], 
 		callback: Callable = Callable(),
@@ -131,12 +145,16 @@ func load_data_table_batch(
 		return results
 
 ## 检查某个路径的数据表是否已缓存
+## [param table_name] 数据表名称
+## [return] 是否已缓存
 func has_data_table_cached(table_name: String) -> bool:
 	if not _table_types.has(table_name): return false
 	if not _table_types[table_name].is_loaded: return false
 	return true
 
 ## 获取已缓存的数据表
+## [param table_name] 数据表名称
+## [return] 数据表配置
 func get_table_data(table_name: String) -> Dictionary:
 	var config : Dictionary
 	if _table_types.has(table_name):
@@ -144,6 +162,9 @@ func get_table_data(table_name: String) -> Dictionary:
 	return config
 
 ## 获取数据表项
+## [param table_name] 数据表名称
+## [param item_id] 项ID
+## [return] 项配置
 func get_table_item(table_name: String, item_id: String) -> Dictionary:
 	var config : Dictionary = get_table_data(table_name)
 	if not config.is_empty():
@@ -151,12 +172,17 @@ func get_table_item(table_name: String, item_id: String) -> Dictionary:
 	return {}
 
 ## 加载模型
+## [param model] 模型配置
+## [param completed_callback] 完成回调
 func load_model(model: ModelType, completed_callback: Callable = Callable()) -> void:
 	if _model_types.has(model.model_name): return
 	_model_types[model.model_name] = model
 	load_data_table(model.table, completed_callback)
 
 ## 批量加载模型
+## [param models] 模型数组
+## [param completed_callback] 完成回调
+## [param progress_callback] 进度回调
 func load_models(models: Array[ModelType], 
 		completed_callback: Callable = Callable(), 
 		progress_callback: Callable = Callable()) -> void:
@@ -168,10 +194,15 @@ func load_models(models: Array[ModelType],
 	load_data_table_batch(tables, completed_callback, progress_callback)
 
 ## 获取模型
+## [param model_name] 模型名称
+## [return] 模型配置
 func get_model_type(model_name: String) -> ModelType:
 	return _model_types.get(model_name, null)
 
 ## 获取数据模型
+## [param model_name] 模型名称
+## [param item_id] 项ID
+## [return] 数据模型
 func get_data_model(model_name: String, item_id: String) -> Resource:
 	var model_type : ModelType = get_model_type(model_name)
 	if not model_type:
@@ -182,6 +213,8 @@ func get_data_model(model_name: String, item_id: String) -> Resource:
 	return model
 
 ## 获取所有数据模型
+## [param model_name] 模型名称
+## [return] 数据模型数组
 func get_all_data_models(model_name: String) -> Array[Resource]:
 	var models : Array[Resource] = []
 	var model_type : ModelType = get_model_type(model_name)
@@ -195,6 +228,8 @@ func get_all_data_models(model_name: String) -> Array[Resource]:
 	return models
 
 ## 加载数据表对象
+## [param table_type] 数据表类型
+## [return] 数据表对象
 func _load_data_type(table_type: TableType) -> Dictionary:
 	for path in table_type.table_paths:
 		var data = _load_data_file(path)
@@ -203,6 +238,8 @@ func _load_data_type(table_type: TableType) -> Dictionary:
 	return table_type.cache
 
 ## 加载数据表文件
+## [param file_path] 文件路径
+## [return] 数据表
 func _load_data_file(file_path: String) -> Dictionary:
 	if not FileAccess.file_exists(file_path):
 		push_error("JSON file not found: %s" % file_path)
@@ -246,6 +283,8 @@ func _loading_thread_function() -> void:
 				task.callback.call(table_type.table_name)
 
 ## 根据数据表文件路径后缀名选择加载器
+## [param path] 文件路径
+## [return] 加载器
 func _get_file_loader(path: String) -> DataLoader:
 	var ext = path.get_extension().to_lower()
 	var loader : DataLoader
@@ -256,11 +295,16 @@ func _get_file_loader(path: String) -> DataLoader:
 	return loader
 
 ## 发送进度回调
+## [param callback] 回调函数
+## [param current] 当前进度
+## [param total] 总进度
 func _emit_progress(callback: Callable, current: int, total: int) -> void:
 	if callback.is_valid():
 		callback.call(current, total)
 
 ## 发送完成回调
+## [param callback] 回调函数
+## [param results] 结果
 func _emit_callback(callback: Callable, results: Array) -> void:
 	if callback.is_valid():
 		callback.call(results)
