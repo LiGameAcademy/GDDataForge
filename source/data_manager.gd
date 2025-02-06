@@ -6,41 +6,36 @@ const DataLoader = preload("res://addons/GDDataForge/source/data_loader.gd")
 const CsvLoader = preload("res://addons/GDDataForge/source/data_loader/csv_loader.gd")
 const JsonLoader = preload("res://addons/GDDataForge/source/data_loader/json_loader.gd")
 
-## 是否启用线程加载
-@export var enable_thread: bool = true
-
 ## 数据表加载器
 var _data_loader_factory : Dictionary[String, DataLoader] = {
 	"csv": CsvLoader.new(),
-	"json": JsonLoader.new(),
+	"json": JsonLoader.new()
 }
 
-var _table_types : Dictionary[String, TableType] = {}
-## 数据模型
+## 已注册的模型类型
 var _model_types: Dictionary[String, ModelType] = {}
+var _table_types: Dictionary[String, TableType] = {}
 
-## 加载线程
-var _loading_thread: Thread
-var _loading_mutex: Mutex
-var _loading_semaphore: Semaphore
-var _loading_queue: Array[Dictionary]
-var _is_loading: bool = false
+## 线程池
+var _thread_pool: ThreadPool
+## 加载中的模型
+var _loading_types: Dictionary = {}
+## 加载中的表格
+var _batch_results: Dictionary = {}
 
-## 批量加载完成信号
+## 加载完成信号
 signal batch_load_completed(results: Dictionary)
-## 单个文件加载完成信号
-signal load_completed(table_name : String)
+signal load_completed(table_name: String)
 
 func _init() -> void:
-	if enable_thread:
-		_loading_mutex = Mutex.new()
-		_loading_semaphore = Semaphore.new()
-		_loading_queue = []
-		_start_loading_thread()
+	_thread_pool = ThreadPool.new()
+	add_child(_thread_pool)
+	_thread_pool.task_completed.connect(_on_table_loaded)
+	_thread_pool.all_tasks_completed.connect(_on_batch_completed)
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE and enable_thread:
-		_stop_loading_thread()
+	if what == NOTIFICATION_PREDELETE:
+		_thread_pool.shutdown()
 
 ## 注册数据表加载器
 ## [param type] 加载器类型
@@ -72,77 +67,72 @@ func clear_table_types() -> void:
 ## [param completed_callback] 完成回调
 ## [return] 返回加载的数据表名字数组
 func load_data_table(table_type: TableType, completed_callback: Callable = Callable()) -> Dictionary:
-	if enable_thread:
-		# 异步加载
-		_loading_mutex.lock()
-		_loading_queue.append({
-			"table_type": table_type,
-			"callback": completed_callback
-		})
-		_loading_mutex.unlock()
-		_loading_semaphore.post()
-		return {}
-	else:
-		# 同步加载
-		# var result = _load_data_type(table_type)
-		_load_data_type(table_type)
+	if table_type.is_loaded:
 		if completed_callback.is_valid():
 			completed_callback.call(table_type.table_name)
 		return table_type.cache
+	
+	# 创建加载任务
+	var task_id = "load_table_%s" % table_type.table_name
+	_loading_types[task_id] = {
+		"table_type": table_type,
+		"completed_callback": completed_callback
+	}
+	
+	_thread_pool.add_task(
+		task_id, 
+		_load_data_type,
+		[table_type],
+		1) 
+	return {}
 
 ## 批量加载数据表
 ## [param table_types] 数据表类型数组
 ## [param callback] 完成回调,返回加载的数据表
 ## [param progress_callback] 进度回调,返回当前加载的数据表数和总数据表数
 ## [return] 返回加载的数据表名字数组
-func load_data_table_batch(
+func load_data_tables(
 		table_types: Array[TableType], 
 		callback: Callable = Callable(),
 		progress_callback: Callable = Callable()) -> Array[String]:
-	if enable_thread:
-		# 异步加载
-		var total = table_types.size()
-		var results : Array[String]
-		var shared_data = {"current": 0}  # 使用字典来共享计数器
-		
-		if total == 0:
-			if callback.is_valid():
-				callback.call(results)
-			batch_load_completed.emit(results)
-			return results
-		
-		for table_type in table_types:
-			load_data_table(table_type, func(table_name: String) -> void:
-				shared_data.current += 1  # 使用共享计数器
-				results.append(table_name)
-				
-				if progress_callback.is_valid():
-					call_deferred("_emit_progress", progress_callback, shared_data.current, total)
-				
-				call_deferred("emit_signal", "load_completed", table_type.table_name)
-				
-				if shared_data.current >= total:
-					print("所有数据表加载完成，结果数：", results.size())
-					if callback.is_valid():
-						call_deferred("_emit_callback", callback, results)
-					call_deferred("emit_signal", "batch_load_completed", results)
-			)
-		return results
-	else:
-		# 同步加载
-		var results : Array[String]
-		var total = table_types.size()
-		for i in range(total):
-			var table_type = table_types[i]
-			_load_data_type(table_type)
-			#results[table_type] = table_type.cache
-			results.append(table_type.table_name)
-			if progress_callback.is_valid():
-				progress_callback.call(i + 1, total)
+	# 异步加载
+	var total : int = table_types.size()
+	var results : Array[String]
+	
+	if total == 0:
+		# 没有需要加载的数据表，立刻返回
 		if callback.is_valid():
 			callback.call(results)
 		batch_load_completed.emit(results)
 		return results
+	
+	# 记录加载进度
+	var progress_data = {"current": 0, "total": total}
+
+	for table_type in table_types:
+		if table_type.is_loaded:
+			progress_data.current += 1
+			results.append(table_type.table_name)
+			continue
+		
+		# 创建加载任务
+		load_data_table(table_type, 
+		func(table_name: String) -> void:
+			progress_data.current += 1  # 使用共享计数器
+			results.append(table_name)
+			
+			if progress_callback.is_valid():
+				progress_callback.call(progress_data.current, progress_data.total)
+			
+			call_deferred("emit_signal", "load_completed", table_type.table_name)
+			
+			if progress_data.current >= total:
+				print("所有数据表加载完成，结果数：", results.size())
+				if callback.is_valid():
+					call_deferred("_emit_callback", callback, results)
+				call_deferred("emit_signal", "batch_load_completed", results)
+		)
+	return results
 
 ## 检查某个路径的数据表是否已缓存
 ## [param table_name] 数据表名称
@@ -175,7 +165,9 @@ func get_table_item(table_name: String, item_id: String) -> Dictionary:
 ## [param model] 模型配置
 ## [param completed_callback] 完成回调
 func load_model(model: ModelType, completed_callback: Callable = Callable()) -> void:
-	if _model_types.has(model.model_name): return
+	if _model_types.has(model.model_name): 
+		push_warning("模型 %s 已存在" % model.model_name)
+		return
 	_model_types[model.model_name] = model
 	load_data_table(model.table, completed_callback)
 
@@ -186,12 +178,14 @@ func load_model(model: ModelType, completed_callback: Callable = Callable()) -> 
 func load_models(models: Array[ModelType], 
 		completed_callback: Callable = Callable(), 
 		progress_callback: Callable = Callable()) -> void:
+	# 注册所有模型
 	for model in models:
 		_model_types[model.model_name] = model
 	var tables : Array[TableType] = []
 	for model in models:
-		tables.append(model.table)
-	load_data_table_batch(tables, completed_callback, progress_callback)
+		if model.table and not model.table.is_loaded:
+			tables.append(model.table)
+	load_data_tables(tables, completed_callback, progress_callback)
 
 ## 获取模型
 ## [param model_name] 模型名称
@@ -207,6 +201,7 @@ func get_data_model(model_name: String, item_id: String) -> Resource:
 	var model_type : ModelType = get_model_type(model_name)
 	if not model_type:
 		push_error("模型 %s 不存在" % model_name)
+		return null
 	var table_type : TableType = model_type.table
 	var data : Dictionary = get_table_item(table_type.table_name, item_id)
 	var model : Resource = model_type.create_instance(data)
@@ -242,7 +237,7 @@ func _load_data_type(table_type: TableType) -> Dictionary:
 ## [return] 数据表
 func _load_data_file(file_path: String) -> Dictionary:
 	if not FileAccess.file_exists(file_path):
-		push_error("JSON file not found: %s" % file_path)
+		push_error("file not found: %s" % file_path)
 		return {}
 	var loader := _get_file_loader(file_path)
 	if not loader:
@@ -250,37 +245,6 @@ func _load_data_file(file_path: String) -> Dictionary:
 		return {}
 	var data = loader.load_datatable(file_path)
 	return data
-
-## 启动加载线程
-func _start_loading_thread() -> void:
-	_loading_thread = Thread.new()
-	_is_loading = true
-	_loading_thread.start(_loading_thread_function)
-
-## 停止加载线程
-func _stop_loading_thread() -> void:
-	_is_loading = false
-	_loading_semaphore.post()  # 唤醒线程以便退出
-	_loading_thread.wait_to_finish()
-
-## 加载线程函数
-func _loading_thread_function() -> void:
-	while _is_loading:
-		_loading_semaphore.wait()  # 等待加载请求
-		if not _is_loading:
-			break
-			
-		# 获取下一个加载任务
-		_loading_mutex.lock()
-		var task = _loading_queue.pop_front() if not _loading_queue.is_empty() else null
-		_loading_mutex.unlock()
-		
-		if task:
-			var table_type : TableType = task.table_type
-			_load_data_type(table_type)
-			# 即使加载失败也调用回调
-			if task.callback.is_valid():
-				task.callback.call(table_type.table_name)
 
 ## 根据数据表文件路径后缀名选择加载器
 ## [param path] 文件路径
@@ -308,3 +272,37 @@ func _emit_progress(callback: Callable, current: int, total: int) -> void:
 func _emit_callback(callback: Callable, results: Array) -> void:
 	if callback.is_valid():
 		callback.call(results)
+
+## 表格加载完成回调
+## [param task_id] 任务ID
+## [param result] 结果
+func _on_table_loaded(task_id: String, result: Variant) -> void:
+	var task_info := _loading_types.get(task_id)
+	if not task_info: 
+		push_error("数据表 %s 加载失败" % task_id)
+		return
+
+	var table_type : TableType = task_info.get("table_type")
+	if not table_type: 
+		push_error("数据表 %s 加载失败" % table_type.table_name)
+		return
+	var callback = task_info.get("completed_callback")
+		
+	# 更新缓存
+	table_type.cache = result
+	table_type.is_loaded = true
+	_table_types[table_type.table_name] = table_type
+	_batch_results[table_type.table_name] = result
+
+	print("数据表 %s 加载完成" % table_type.table_name)
+
+	# 发送完成回调
+	if callback and callback.is_valid():
+		callback.call(table_type.table_name)
+
+	_loading_types.erase(task_id)
+
+func _on_batch_completed() -> void:
+	if not _batch_results.is_empty():
+		batch_load_completed.emit(_batch_results)
+		_batch_results.clear()

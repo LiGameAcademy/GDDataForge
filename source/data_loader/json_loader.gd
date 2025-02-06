@@ -12,6 +12,8 @@ var _parse_types: Dictionary[String, String] = {
 }
 
 ## 加载单个JSON文件
+## [param table_path] JSON文件路径
+## [return] 加载结果
 func load_datatable(table_path: StringName) -> Dictionary:
 	if not FileAccess.file_exists(table_path):
 		push_error("JSON file not found: %s" % table_path)
@@ -25,6 +27,8 @@ func load_datatable(table_path: StringName) -> Dictionary:
 	return _process_resource_references(json)
 
 ## 处理JSON中的资源引用
+## [param data] JSON数据
+## [return] 处理后的数据
 func _process_resource_references(data: Variant) -> Variant:
 	match typeof(data):
 		TYPE_DICTIONARY:
@@ -43,6 +47,8 @@ func _process_resource_references(data: Variant) -> Variant:
 			return data
 
 ## 解析资源路径
+## [param value] 资源路径
+## [return] 加载结果
 func _resolve_resource_path(value: String) -> Variant:
 	for marker in _parse_types:
 		var prefix = _parse_types[marker]
@@ -58,6 +64,8 @@ func _resolve_resource_path(value: String) -> Variant:
 	return value
 
 ## 加载vector2
+## [param value] 向量字符串
+## [return] 向量
 func _load_vector2(value: String) -> Vector2:
 	value = value.replace("(", "").replace(")", "")
 	var vs: Array[float]
@@ -66,6 +74,9 @@ func _load_vector2(value: String) -> Vector2:
 	return Vector2(vs[0], vs[1])
 
 ## 加载资源
+## [param path] 资源路径
+## [param type] 资源类型
+## [return] 资源
 func _load_resource(path: String, type: String) -> Variant:
 	if ResourceLoader.exists(path):
 		return ResourceLoader.load(path)
