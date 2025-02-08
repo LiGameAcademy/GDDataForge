@@ -27,6 +27,9 @@ var _batch_results: Dictionary = {}
 signal batch_load_completed(results: Dictionary)
 signal load_completed(table_name: String)
 
+## 自定义验证函数字典
+var _custom_validators: Dictionary = {}
+
 func _init() -> void:
 	_thread_pool = ThreadPool.new()
 	add_child(_thread_pool)
@@ -146,20 +149,29 @@ func has_data_table_cached(table_name: String) -> bool:
 ## [param table_name] 数据表名称
 ## [return] 数据表配置
 func get_table_data(table_name: String) -> Dictionary:
-	var config : Dictionary
 	if _table_types.has(table_name):
-		config = _table_types[table_name].cache
-	return config
+		if not _table_types[table_name].is_loaded:
+			return {}
+		if _table_types[table_name].cache.is_empty():
+			return {}
+		return _table_types[table_name].cache.get("data", {})
+	return {}
 
 ## 获取数据表项
 ## [param table_name] 数据表名称
 ## [param item_id] 项ID
 ## [return] 项配置
 func get_table_item(table_name: String, item_id: String) -> Dictionary:
-	var config : Dictionary = get_table_data(table_name)
-	if not config.is_empty():
-		return config[item_id]
+	var data : Dictionary = get_table_data(table_name)
+	if not data.is_empty():
+		return data.get(item_id, {})
 	return {}
+
+## 获取模型
+## [param model_name] 模型名称
+## [return] 模型配置
+func get_model_type(model_name: String) -> ModelType:
+	return _model_types.get(model_name, null)
 
 ## 加载模型
 ## [param model] 模型配置
@@ -186,12 +198,6 @@ func load_models(models: Array[ModelType],
 		if model.table and not model.table.is_loaded:
 			tables.append(model.table)
 	load_data_tables(tables, completed_callback, progress_callback)
-
-## 获取模型
-## [param model_name] 模型名称
-## [return] 模型配置
-func get_model_type(model_name: String) -> ModelType:
-	return _model_types.get(model_name, null)
 
 ## 获取数据模型
 ## [param model_name] 模型名称
@@ -222,13 +228,70 @@ func get_all_data_models(model_name: String) -> Array[Resource]:
 		models.append(model)
 	return models
 
+## 注册自定义验证函数
+## [param name] 函数名称
+## [param validator] 函数
+func register_validator(name: String, validator: Callable) -> void:
+	_custom_validators[name] = validator
+
+## 注销自定义验证函数
+## [param name] 函数名称
+func unregister_validator(name: String) -> void:
+	_custom_validators.erase(name)
+
+## 获取自定义验证函数
+## [param name] 函数名称
+## [return] 函数
+func get_validator(name: String) -> Callable:
+	return _custom_validators.get(name, Callable())
+
+## 验证指定数据表
+## [param table_name] 数据表名称,如果为空则验证所有数据表
+## [return] 验证结果
+func validate_table(table_name: String = "") -> Array[Dictionary]:
+	if table_name.is_empty():
+		# 验证所有数据表
+		var all_errors : Dictionary = {}
+		for type_name in _table_types:
+			var errors = validate_table(type_name)
+			if not errors.is_empty():
+				all_errors[type_name] = errors
+		return [all_errors]
+	
+	# 验证指定数据表
+	var errors : Array[Dictionary] = []
+	if not _table_types.has(table_name):
+		push_error("数据表不存在: %s" % table_name)
+		return errors
+	
+	var table_type = _table_types[table_name]
+	if not table_type.is_loaded:
+		push_error("数据表未加载: %s" % table_name)
+		return errors
+	
+	return table_type.validation_results()
+
+## 验证外键
+## [param field] 字段名称
+## [param value] 值
+func validate_foreign_key(field: String, value: Variant) -> Dictionary:
+	return {}
+
+## 验证自定义验证函数
+## [param field] 字段名称
+## [param value] 值
+func validate_custom(field: String, value: Variant) -> Dictionary:
+	return {}
+
 ## 加载数据表对象
 ## [param table_type] 数据表类型
 ## [return] 数据表对象
 func _load_data_type(table_type: TableType) -> Dictionary:
 	for path in table_type.table_paths:
-		var data = _load_data_file(path)
+		var data = _load_data_file(path).get("data",{})
+		var rules = _load_data_file(path).get("validation_rules", {})
 		table_type.cache.merge(data, true)
+		table_type.validation_rules.merge(rules, true)
 	_table_types[table_type.table_name] = table_type
 	return table_type.cache
 

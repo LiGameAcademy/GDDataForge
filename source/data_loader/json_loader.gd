@@ -24,7 +24,9 @@ func load_datatable(table_path: StringName) -> Dictionary:
 		push_error("Invalid JSON format: %s" % table_path)
 		return {}
 	# 处理资源引用
-	return _process_resource_references(json)
+	return {
+		"data": _process_resource_references(json)
+	}
 
 ## 处理JSON中的资源引用
 ## [param data] JSON数据

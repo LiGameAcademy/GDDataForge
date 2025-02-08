@@ -10,6 +10,8 @@ var _parsers : Dictionary[String, Callable] = {
 	"resource": _parse_resource,
 	"dictionary": _parse_dictionary,
 }
+## 支持的数据校验类型
+var _validation_types : Array[String] = ["required", "unique", "primary", "min", "max", "range", "enum", "foreign", "custom"]
 
 ## 重写加载单一数据表，这里对CSV文件数据行格式化
 func load_datatable(table_path: StringName) -> Dictionary:
@@ -17,11 +19,19 @@ func load_datatable(table_path: StringName) -> Dictionary:
 	var ok := FileAccess.get_open_error()
 	if ok != OK: 
 		push_error("未能正确打开文件！")
-	var _file_data : Dictionary = {}
+	var file_data : Dictionary = {}
 	# CSV数据解析
 	var data_names : PackedStringArray = file.get_csv_line(",")					# 第1行是数据名称字段
-	var _dec : PackedStringArray = file.get_csv_line(",")						# 第2行是数据注释字段
+	var validation_rules : PackedStringArray = file.get_csv_line(",")			# 第2行是数据验证规则
 	var data_types : PackedStringArray = file.get_csv_line(",")					# 第3行是数据类型字段
+	
+	# 解析验证规则
+	var field_rules = {}
+	for index in data_names.size():
+		var field_name = data_names[index]
+		if not field_name.is_empty() and not validation_rules[index].is_empty():
+			field_rules[field_name] = _parse_validation_rules(validation_rules[index])
+	
 	while not file.eof_reached():
 		var row : PackedStringArray = file.get_csv_line(",")				# 每行的数据，如果为空则跳过
 		if row.is_empty(): continue
@@ -32,11 +42,15 @@ func load_datatable(table_path: StringName) -> Dictionary:
 			if data_name.is_empty(): continue
 			var data_type : StringName = data_types[index]
 			if data_type.is_empty(): continue
-			# row_data[data_name] = row[index]
 			row_data[data_name] = _parse_value(row[index], data_type)
-		if not row_data.is_empty() and not row_data.ID.is_empty(): 
-			_file_data[StringName(row_data.ID)] = row_data
-	return _file_data
+		
+		# 验证数据
+		if not row_data.is_empty() and not row_data.ID.is_empty():
+			file_data[StringName(row_data.ID)] = row_data
+	return {
+		"data": file_data,
+		"validation_rules": field_rules
+	}
 
 ## 注册数据类型处理器
 func register_parser(type: StringName, parser: Callable) -> void:
@@ -124,3 +138,34 @@ func _parse_dictionary(v: String) -> Dictionary:
 		if kv.size() == 2:
 			dict[kv[0].strip_edges()] = kv[1].strip_edges()
 	return dict
+
+## 解析验证规则字符串
+func _parse_validation_rules(rules_str: String) -> Dictionary:
+	var rules = {}
+	if rules_str.is_empty():
+		return rules
+	
+	var rule_parts = rules_str.split("|")
+	for part in rule_parts:
+		if part.is_empty():
+			continue
+		
+		var key_value = part.split(":", 2)
+		var rule_name = key_value[0].strip_edges()
+		if not rule_name in _validation_types:
+			continue
+		var rule_params = {} if key_value.size() == 1 else _parse_rule_params(key_value[1])
+
+		rules[rule_name] = {
+			"type": rule_name,
+			"params": rule_params
+		}
+
+	return rules
+
+## 解析规则参数
+func _parse_rule_params(params_str: String) -> Variant:
+	if params_str.contains("-"):  # 范围参数
+		var parts = params_str.split("-")
+		return {"min": parts[0].to_float(), "max": parts[1].to_float()}
+	return params_str.strip_edges()
