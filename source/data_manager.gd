@@ -156,10 +156,14 @@ func get_table_data(table_name: String) -> Dictionary:
 ## [param item_id] 项ID
 ## [return] 项配置
 func get_table_item(table_name: String, item_id: String) -> Dictionary:
-	var config : Dictionary = get_table_data(table_name)
-	if not config.is_empty():
-		return config[item_id]
-	return {}
+	var data : Dictionary = get_table_data(table_name)
+	if data.is_empty(): 
+		push_error("数据表 %s 不存在" % table_name)
+		return {}
+	if not data.has(item_id):
+		push_error("数据表 %s 中不存在项 %s" % [table_name, item_id])
+		return {}
+	return data.get(item_id)
 
 ## 加载模型
 ## [param model] 模型配置
