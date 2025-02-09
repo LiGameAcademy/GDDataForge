@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-[![Godot v4.3](https://img.shields.io/badge/Godot-v4.3-%23478cbf)](https://godotengine.org/)
+[![Godot v4.4](https://img.shields.io/badge/Godot-v4.4-%23478cbf)](https://godotengine.org/)
 [![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](../../LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/Liweimin0512/GDDataForge)
 [![Gitee](https://img.shields.io/badge/Gitee-Repository-red?logo=gitee)](https://gitee.com/Giab/GDDataForge)
