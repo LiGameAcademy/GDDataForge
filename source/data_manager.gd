@@ -167,7 +167,7 @@ func get_table_item(table_name: String, item_id: String) -> Dictionary:
 
 ## 加载模型
 ## [param model] 模型配置
-## [param completed_callback] 完成回调
+## [param completed_callback] 完成回调, 返回模型对象
 func load_model(model: ModelType, completed_callback: Callable = Callable()) -> void:
 	if _model_types.has(model.model_name): 
 		push_warning("模型 %s 已存在" % model.model_name)
