@@ -165,6 +165,13 @@ func get_table_item(table_name: String, item_id: String) -> Dictionary:
 		return {}
 	return data.get(item_id)
 
+
+## 是否存在数据表项
+func has_table_item(table_name : String, item_id: String) -> bool:
+	var data : Dictionary = get_table_data(table_name)
+	return data.has(item_id)
+
+
 ## 加载模型
 ## [param model] 模型配置
 ## [param completed_callback] 完成回调, 返回模型对象
