@@ -163,9 +163,20 @@ func get_table_data(table_name: String) -> Dictionary:
 ## [return] 项配置
 func get_table_item(table_name: String, item_id: String) -> Dictionary:
 	var data : Dictionary = get_table_data(table_name)
-	if not data.is_empty():
-		return data.get(item_id, {})
-	return {}
+	if data.is_empty(): 
+		push_error("数据表 %s 不存在" % table_name)
+		return {}
+	if not data.has(item_id):
+		push_error("数据表 %s 中不存在项 %s" % [table_name, item_id])
+		return {}
+	return data.get(item_id)
+
+
+## 是否存在数据表项
+func has_table_item(table_name : String, item_id: String) -> bool:
+	var data : Dictionary = get_table_data(table_name)
+	return data.has(item_id)
+
 
 ## 获取模型
 ## [param model_name] 模型名称
@@ -175,7 +186,7 @@ func get_model_type(model_name: String) -> ModelType:
 
 ## 加载模型
 ## [param model] 模型配置
-## [param completed_callback] 完成回调
+## [param completed_callback] 完成回调, 返回模型对象
 func load_model(model: ModelType, completed_callback: Callable = Callable()) -> void:
 	if _model_types.has(model.model_name): 
 		push_warning("模型 %s 已存在" % model.model_name)
