@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://br3jamwkx21cy"]
 
-[ext_resource type="Script" uid="uid://bt5firv3f8hwj" path="res://addons/li_data_manager/examples/example_scene.gd" id="1_of7mr"]
-[ext_resource type="Script" uid="uid://bf3cohk1etxvp" path="res://addons/li_data_manager/source/resource/model_type.gd" id="2_etxah"]
-[ext_resource type="Resource" uid="uid://bnsbjerbe0i0t" path="res://addons/li_data_manager/examples/resources/model_types/item_model_type.tres" id="3_esdcf"]
-[ext_resource type="Resource" uid="uid://b556wun2wqhoe" path="res://addons/li_data_manager/examples/resources/model_types/player_model_type.tres" id="4_q78k6"]
+[ext_resource type="Script" uid="uid://bt5firv3f8hwj" path="res://addons/GDDataForge/examples/example_scene.gd" id="1_of7mr"]
+[ext_resource type="Script" uid="uid://bf3cohk1etxvp" path="res://addons/GDDataForge/source/resource/model_type.gd" id="2_etxah"]
+[ext_resource type="Resource" uid="uid://bnsbjerbe0i0t" path="res://addons/GDDataForge/examples/resources/model_types/item_model_type.tres" id="3_esdcf"]
+[ext_resource type="Resource" uid="uid://b556wun2wqhoe" path="res://addons/GDDataForge/examples/resources/model_types/player_model_type.tres" id="4_q78k6"]
 
 [node name="ExampleScene" type="Control"]
 layout_mode = 3
@@ -26,15 +26,10 @@ grow_vertical = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 
-[node name="SyncTestBtn" type="Button" parent="VBoxContainer/HBoxContainer"]
+[node name="LoadBtn" type="Button" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "同步加载"
-
-[node name="AsyncTestBtn" type="Button" parent="VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "异步加载"
+text = "加载数据"
 
 [node name="ClearBtn" type="Button" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -48,6 +43,5 @@ size_flags_vertical = 3
 text = "数据输出窗口
 "
 
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/SyncTestBtn" to="." method="_on_sync_test_btn_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/AsyncTestBtn" to="." method="_on_async_test_btn_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/LoadBtn" to="." method="_on_load_btn_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ClearBtn" to="." method="_on_clear_btn_pressed"]

@@ -83,29 +83,8 @@ func _test_model_methods() -> void:
 		_print_test_info("- 主属性值: %d" % shield.get_main_property())
 		_print_test_info("- 是否有'防具'标签: %s" % shield.has_tag("防具"))
 
-func _on_sync_test_btn_pressed() -> void:
-	_print_test_info("\n=== 开始同步加载测试 ===")
-	
-	# 配置为同步加载
-	DataManager.enable_thread = false
-	# 同步加载
-	DataManager.load_models(_model_types)
-	
-	# 输出加载结果
-	_print_test_info("\n同步加载完成！")
-	for model_type in _model_types:
-		var table_name : String = model_type.table.table_name
-		var models : Array = DataManager.get_all_data_models(model_type.model_name)
-		for model in models:
-			var data : Dictionary = DataManager.get_table_item(table_name, model.id)
-			_print_table_data(table_name, data)
-	_test_model_methods()
-
-func _on_async_test_btn_pressed() -> void:
+func _on_load_btn_pressed() -> void:
 	_print_test_info("\n=== 开始异步加载测试 ===")
-	
-	# 配置为异步加载
-	DataManager.enable_thread = true
 	
 	# 异步加载
 	DataManager.load_models(_model_types, func(loaded_tables: Array[String]):

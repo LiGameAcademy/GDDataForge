@@ -6,7 +6,7 @@
 		"damage": 100,
 		"defense": 0,
 		"position": "@vector2:(10, 20)",
-		"icon": "@resource://addons/li_data_manager/examples/assets/sword.svg",
+		"icon": "@resource://addons/GDDataForge/examples/assets/sword.svg",
 		"properties": {
 			"fire_damage": 50,
 			"critical_rate": 0.2
@@ -20,7 +20,7 @@
 		"damage": 0,
 		"defense": 80,
 		"position": "@vector2:(30, 40)",
-		"icon": "@resource://addons/li_data_manager/examples/assets/shield.png",
+		"icon": "@resource://addons/GDDataForge/examples/assets/shield.png",
 		"properties": {
 			"ice_defense": 40,
 			"block_rate": 0.3
@@ -34,7 +34,7 @@
 		"damage": 150,
 		"defense": 20,
 		"position": "@vector2:(50, 60)",
-		"icon": "@resource://addons/li_data_manager/examples/assets/staff.png",
+		"icon": "@resource://addons/GDDataForge/examples/assets/staff.png",
 		"properties": {
 			"lightning_damage": 80,
 			"magic_boost": 0.4

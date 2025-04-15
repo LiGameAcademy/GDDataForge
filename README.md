@@ -1,148 +1,151 @@
-# Godot Data Manager Plugin
+# Godot 数据管理器插件
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README-EN.md) | 简体中文
 
 [![Godot v4.4](https://img.shields.io/badge/Godot-v4.4-%23478cbf)](https://godotengine.org/)
 [![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](../../LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/Liweimin0512/GDDataForge)
-[![Gitee](https://img.shields.io/badge/Gitee-Repository-red?logo=gitee)](https://gitee.com/Giab/GDDataForge)
+[![GitHub](https://img.shields.io/badge/GitHub-仓库-black?logo=github)](https://github.com/Liweimin0512/GDDataForge)
+[![Gitee](https://img.shields.io/badge/Gitee-仓库-red?logo=gitee)](https://gitee.com/Giab/GDDataForge)
 
-## 💡 Introduction
+## 💡 简介
 
-A flexible and efficient data management plugin designed for Godot 4.4, helping you easily manage and load game data from various file formats (CSV, JSON, etc.). Supports asynchronous loading based on thread pools, perfect for handling large amounts of game data without impacting performance. Supports direct construction of custom Resource type objects from data by defining DataType and ModelType to implement more complex data table and data model features.
+一个为 Godot 4.4 设计的灵活高效的数据管理插件，帮助您轻松管理和加载来自各种文件格式（CSV、JSON 等）的游戏数据。支持基于线程池的异步加载，非常适合处理大量游戏数据而不影响性能。支持从数据直接构造自定义 Resource 类型的对象，通过定义 DataType 和 ModelType 来实现更复杂的数据表和数据模型特性。
 
-## ✨ Features
+## ✨ 特性
 
-- **Multiple File Format Support**
+- **多文件格式支持**
 
-  - Support for CSV files
-  - Support for JSON files
-  - Extensible loader system for adding new formats
+  - 支持 CSV 文件
+  - 支持 JSON 文件
+  - 可扩展的加载器系统，方便添加新格式
 
-- **Flexible Data Loading**
+- **灵活的数据加载**
 
-  - Synchronous loading for simple scenarios
-  - Asynchronous loading for better performance
-  - Support for progress tracking and callbacks
+  - 同步加载用于简单场景
+  - 异步加载提供更好性能
+  - 支持进度跟踪和回调
 
-- **Type Safety**
+- **类型安全**
 
-  - Strong type checking
-  - Automatic type conversion
-  - Data integrity validation system
+  - 强类型检查
+  - 自动类型转换
+  - 数据完整性验证系统
 
-- **Memory Efficiency**
-  - Data caching system
-  - Shared resource reference counting
-  - Memory-optimized data structures
+- **内存效率**
+  - 数据缓存系统
+  - 共享资源引用计数
+  - 内存优化的数据结构
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Installation
+### 安装
 
-1. Download or clone this repository
-2. Copy the repository to your project's `addons` folder
-3. Enable the plugin in Project Settings -> Plugins
+1. 下载或克隆此仓库
+2. 将仓库复制到你项目的 `addons` 文件夹中
+3. 确保插件项目文件夹命名为`GDDataForge`
+4. 在项目设置 -> 插件中启用此插件
 
-### Basic Usage
+### 基本用法
 
-#### 1. **Define Data Table Type**
+#### 1. **定义数据表类型**
 
 ```gdscript
-# Create table type resource
+# 创建表格类型资源
 var item_type = TableType.new(
   "item",
   ["res://data/items.csv"]
 )
 ```
 
-#### 2. **Model Data Mapping**
+#### 2. **模型数据映射**
 
 ```gdscript
-# Create model type resource
+# 创建模型类型资源
 class ItemModel:
   extends Resource
   var id: String
   var name: String
 
 var item_model_type = ModelType.new(
-    "item",
-    "res://scripts/item_model.gd",
-    item_type,
+	"item",
+	"res://scripts/item_model.gd",
+	item_type,
 )
 ```
 
-#### 3. **Load Data**
+#### 3. **加载数据**
 
 ```gdscript
-# Synchronous loading
+# 同步加载
 DataManager.load_data_tables([table_type])
 
-# Asynchronous loading with callback
+# 异步加载带回调
 DataManager.load_data_tables_async([table_type],
-    func(results): print("Loading complete!"),
-    func(current, total): print("Progress: %d/%d" % [current, total])
+	func(results): print("加载完成！"),
+	func(current, total): print("进度:%d/%d" % [current, total])
 )
 ```
 
-#### 4. **Access Data**
+#### 4. **访问数据**
 
 ```gdscript
-# Get item data
+# 获取物品数据
 var item_datas = DataManager.get_table_data("items")
-# Get single item data
+# 获取单个物品数据
 var item_data = DataManager.get_table_item("items", "sword_1")
-# Get item data model
+# 获取物品数据模型
 var item : ItemModel = DataManager.get_data_model("item", "sword_1")
 ```
 
-### Example Scenes
+### 示例场景
 
-Check out the example scenes in `addons/li_data_manager/examples` to see the plugin in action:
+查看 `addons/li_data_manager/examples` 中的示例场景，了解插件的实际应用：
 
-- Data loading demonstration
-- Type conversion examples
-- Progress tracking
-- Error handling
+- 数据加载演示
+- 类型转换示例
+- 进度跟踪
+- 错误处理
 
-## 🗺️ Development Plan
+## 🗺️ 开发计划
 
-- [x] Basic functionality implementation
+- [x] 基本功能实现
 
-  - [x] Extensible loader system
-  - [x] Synchronous and asynchronous loading
-  - [x] Data type safety
-  - [x] Memory optimization
+  - [x] 可拓展的加载器系统
+  - [x] 同步加载和异步加载
+  - [x] 数据类型安全
+  - [x] 内存优化
 
-- [ ] Visual Data Editor
+- [ ] 可视化数据编辑器
 
-  - [ ] Table structure editing
-  - [ ] Data entry and modification
-  - [ ] Import/Export functionality
-  - [ ] Preview and validation tools
+  - [ ] 表格结构编辑
+  - [ ] 数据录入和修改
+  - [ ] 导入导出功能
+  - [ ] 预览和验证工具
 
-- [ ] Other Features
-  - [ ] Support for more file formats
-  - [ ] Support for more complex data types in JSON files
-  - [ ] Configurable data validation rules
-  - [ ] Data compression options
-  - [ ] Data encryption support
-  - [ ] Data hot reloading
-  - [ ] Network synchronization
+- [ ] 其他功能
+  - [ ] 更多文件格式支持
+  - [ ] json 文件支持更多复杂数据类型
+  - [ ] 可配置的数据校验规则
+  - [ ] 数据压缩选项
+  - [ ] 数据加密支持
+  - [ ] 数据热加载
+  - [ ] 网络同步
 
-## 🤝 Contributing
+## 🤝 参与贡献
 
-We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
+欢迎参与贡献！您可以：
 
-## 📋 Code of Conduct
+1. Fork 这个仓库
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的更改 (`git commit -m '添加一些很棒的功能'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启一个 Pull Request
 
-Please note that this project follows a [Code of Conduct](docs/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.
+## 📄 许可证
 
-## 📄 License
+本项目采用 MIT 许可证 - 查看 [LICENSE](/LICENSE) 文件了解详情。
 
-This project is licensed under the MIT License - see the [LICENSE](/LICENSE) file for details.
+## 📬 联系方式
 
-## 📬 Contact
-
-- GitHub Issues: [Issues](https://github.com/Liweimin0512/GDDataForge/issues)
-- Email: [liwemin0284@gmail.com](liwemin0284@gmail.com)
+- GitHub Issue 追踪：[Issues](https://github.com/Liweimin0512/GDDataForge/issues)
+- 邮箱：[liwemin0284@gmail.com](liwemin0284@gmail.com)
