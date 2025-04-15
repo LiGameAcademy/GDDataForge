@@ -76,11 +76,8 @@ var item_model_type = ModelType.new(
 #### 3. **加载数据**
 
 ```gdscript
-# 同步加载
-DataManager.load_data_tables([table_type])
 
-# 异步加载带回调
-DataManager.load_data_tables_async([table_type],
+DataManager.load_data_tables([table_type],
 	func(results): print("加载完成！"),
 	func(current, total): print("进度:%d/%d" % [current, total])
 )
