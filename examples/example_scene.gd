@@ -4,10 +4,6 @@ extends Control
 const ItemModel = preload("res://addons/GDDataForge/examples/scripts/resource/item_model.gd")
 const PlayerModel = preload("res://addons/GDDataForge/examples/scripts/resource/player_model.gd")
 
-## 数据表路径
-const TEST_CSV_PATH = "res://addons/GDDataForge/examples/data_table/test_data.csv"
-const TEST_JSON_PATH = "res://addons/GDDataForge/examples/data_table/test_data.json"
-
 ## UI 组件
 @onready var test_output : RichTextLabel = %TestOutput
 
@@ -60,7 +56,7 @@ func _test_model_methods() -> void:
 	# 测试玩家模型方法
 	var player_models := DataManager.get_all_data_models("player")
 	for player : PlayerModel in player_models:
-		_print_test_info("\n玩家模型方法测试 (player_1):")
+		_print_test_info("\n玩家模型方法测试 : %s" %player.name)
 		_print_test_info("- 攻击力: %d" % player.get_attack())
 		_print_test_info("- 防御力: %d" % player.get_defense())
 		_print_test_info("- 速度: %d" % player.get_speed())
@@ -82,6 +78,8 @@ func _test_model_methods() -> void:
 		_print_test_info("- 是否防具: %s" % shield.is_shield())
 		_print_test_info("- 主属性值: %d" % shield.get_main_property())
 		_print_test_info("- 是否有'防具'标签: %s" % shield.has_tag("防具"))
+		
+	print("table shield :", DataManager.get_table_item("item", "shield_1") )
 
 func _on_load_btn_pressed() -> void:
 	_print_test_info("\n=== 开始异步加载测试 ===")
