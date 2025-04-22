@@ -238,7 +238,7 @@ func get_all_data_models(model_name: String) -> Array[Resource]:
 ## [return] 数据表对象
 func _load_data_type(table_type: TableType) -> Dictionary:
 	for path in table_type.table_paths:
-		var data = _load_data_file(path)
+		var data : Dictionary = _load_data_file(path)
 		table_type.cache.merge(data, true)
 	_table_types[table_type.table_name] = table_type
 	return table_type.cache

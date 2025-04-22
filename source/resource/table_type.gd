@@ -4,7 +4,7 @@ class_name TableType
 ## 表格名称
 @export var table_name: StringName
 ## 表格文件路径列表
-@export_file var table_paths: Array[String]
+@export_file var table_paths: PackedStringArray
 ## 表格描述
 @export_multiline var description: String
 ## 主键字段名
