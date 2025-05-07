@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_33j5m")
 table_name = &"player"
-table_paths = Array[String](["res://addons/GDDataForge/examples/data_table/player_data.csv"])
+table_paths = PackedStringArray("res://addons/GDDataForge/examples/data_table/player_data.csv")
 description = ""
 primary_key = "ID"
 enable_cache = true

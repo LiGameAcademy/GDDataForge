@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_3cjjf")
 table_name = &"item"
-table_paths = Array[String](["res://addons/GDDataForge/examples/data_table/item_data.json"])
+table_paths = PackedStringArray("res://addons/GDDataForge/examples/data_table/item_data.json")
 description = ""
 primary_key = "ID"
 enable_cache = true
