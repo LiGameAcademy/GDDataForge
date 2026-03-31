@@ -105,6 +105,42 @@ func _create_editor_panel() -> void:
 	var sep = HSeparator.new()
 	toolbar.add_child(sep)
 	
+	# 添加行按钮
+	var btn_add_row = Button.new()
+	btn_add_row.text = "+ 行"
+	btn_add_row.name = "BtnAddRow"
+	btn_add_row.pressed.connect(_on_add_row_pressed)
+	toolbar.add_child(btn_add_row)
+	_toolbar_buttons.append(btn_add_row)
+	
+	# 删除行按钮
+	var btn_del_row = Button.new()
+	btn_del_row.text = "- 行"
+	btn_del_row.name = "BtnDelRow"
+	btn_del_row.pressed.connect(_on_delete_row_pressed)
+	toolbar.add_child(btn_del_row)
+	_toolbar_buttons.append(btn_del_row)
+	
+	# 添加列按钮
+	var btn_add_col = Button.new()
+	btn_add_col.text = "+ 列"
+	btn_add_col.name = "BtnAddCol"
+	btn_add_col.pressed.connect(_on_add_column_pressed)
+	toolbar.add_child(btn_add_col)
+	_toolbar_buttons.append(btn_add_col)
+	
+	# 删除列按钮
+	var btn_del_col = Button.new()
+	btn_del_col.text = "- 列"
+	btn_del_col.name = "BtnDelCol"
+	btn_del_col.pressed.connect(_on_delete_column_pressed)
+	toolbar.add_child(btn_del_col)
+	_toolbar_buttons.append(btn_del_col)
+	
+	# 添加工具栏分隔2
+	var sep2 = HSeparator.new()
+	toolbar.add_child(sep2)
+	
 	# 导入按钮
 	var btn_import = Button.new()
 	btn_import.text = "导入"
@@ -170,6 +206,8 @@ func _create_editor_panel() -> void:
 	_table_view.size_flags_vertical = Control.SIZE_FLAG_EXPAND_FILL
 	_table_view.columns = 0  # 动态列
 	_table_view.column_titles_visible = true
+	_table_view.item_activated.connect(_on_table_view_item_activated)
+	_table_view.item_changed.connect(_on_table_view_item_changed)
 	right_vbox.add_child(_table_view)
 	
 	# ===== 状态栏 =====
@@ -219,6 +257,85 @@ func _on_save_table_pressed() -> void:
 	
 	_save_table_to_file(file_path)
 	_update_status("已保存: " + file_path)
+
+func _on_add_row_pressed() -> void:
+	# 弹出对话框让用户输入新行 ID
+	var dialog = AcceptDialog.new()
+	dialog.title = "添加行"
+	dialog.ok_button_text = "添加"
+	dialog.cancel_button_text = "取消"
+	
+	var input = LineEdit.new()
+	input.name = "RowIdInput"
+	input.placeholder_text = "输入行 ID"
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_child(Label.new())
+	vbox.add_child(Label.new().with_text("请输入新行的ID:"))
+	vbox.add_child(input)
+	
+	dialog.set_content(vbox)
+	# 注意: 这里简化处理，实际需要正确设置 dialog
+	_add_row_with_dialog()
+	_update_status("请在弹出的对话框中输入行 ID")
+
+func _add_row_with_dialog() -> void:
+	# 使用简单的方式：自动生成新 ID
+	var new_id = "new_row_%d" % (_current_table.size() + 1)
+	var row_data = {}
+	for col in _current_table_columns:
+		row_data[col] = ""
+	
+	_current_table[new_id] = row_data
+	_refresh_table_view()
+	_update_status("已添加新行: " + new_id)
+	table_modified.emit(_current_table_name)
+
+func _on_delete_row_pressed() -> void:
+	var item = _table_view.get_selected()
+	if not item:
+		_update_status("请先选择一行")
+		return
+	
+	var row_id = _table_view.get_item_text(item, 0)
+	_current_table.erase(row_id)
+	_refresh_table_view()
+	_update_status("已删除行: " + row_id)
+	table_modified.emit(_current_table_name)
+
+func _on_add_column_pressed() -> void:
+	# 简单实现：添加列
+	var col_name = "column_%d" % (_current_table_columns.size() + 1)
+	var col_type = "string"
+	
+	_current_table_columns.append(col_name)
+	_current_table_types.append(col_type)
+	
+	# 为现有行添加空值
+	for row_id in _current_table.keys():
+		_current_table[row_id][col_name] = ""
+	
+	_refresh_table_view()
+	_update_status("已添加列: " + col_name)
+	table_modified.emit(_current_table_name)
+
+func _on_delete_column_pressed() -> void:
+	# 简单实现：删除最后一列
+	if _current_table_columns.is_empty():
+		_update_status("没有列可删除")
+		return
+	
+	var col_name = _current_table_columns.back()
+	_current_table_columns.erase(_current_table_columns.size() - 1)
+	_current_table_types.erase(_current_table_types.size() - 1)
+	
+	# 删除所有行的该列数据
+	for row_id in _current_table.keys():
+		_current_table[row_id].erase(col_name)
+	
+	_refresh_table_view()
+	_update_status("已删除列: " + col_name)
+	table_modified.emit(_current_table_name)
 
 func _on_import_pressed() -> void:
 	_update_status("导入功能开发中...")
@@ -296,6 +413,49 @@ func _refresh_table_view() -> void:
 			if row_data.has(col_name):
 				item.set_text(i + 1, str(row_data[col_name]))
 
+## 表格项双击编辑
+func _on_table_view_item_activated() -> void:
+	var item = _table_view.get_selected()
+	if not item:
+		return
+	
+	var column = _table_view.get_selected_column()
+	if column == 0:
+		_update_status("ID 列不能编辑")
+		return
+	
+	# 简单的单元格编辑：直接弹出输入框
+	_show_cell_edit_dialog(item, column)
+
+## 数据变更处理
+func _on_table_view_item_changed(item: TreeItem) -> void:
+	# 当单元格编辑完成后更新数据
+	var row_id = _table_view.get_item_text(item, 0)
+	var column = _table_view.get_selected_column()
+	if column <= 0:
+		return
+	
+	var col_name = _current_table_columns[column - 1]
+	var new_value = _table_view.get_item_text(item, column)
+	
+	# 类型转换
+	if column - 1 < _current_table_types.size():
+		var expected_type = _current_table_types[column - 1]
+		new_value = _validate_and_convert_value(new_value, expected_type)
+	
+	_current_table[row_id][col_name] = new_value
+	table_modified.emit(_current_table_name)
+
+## 单元格编辑弹窗
+func _show_cell_edit_dialog(item: TreeItem, column: int) -> void:
+	# 这是简化实现，实际需要自定义 Dialog
+	# Godot 4.x 中 Tree 的单元格编辑比较复杂
+	# 这里用状态消息提示用户
+	var col_name = _current_table_columns[column - 1] if column - 1 < _current_table_columns.size() else "?"
+	var current_value = item.get_text(column)
+	_update_status("编辑列: " + col_name + " = " + current_value)
+	# TODO: 实现真正的单元格编辑
+
 ## ===== 文件加载 =====
 
 func _load_table_file(file_path: String) -> void:
@@ -312,9 +472,14 @@ func _load_table_file(file_path: String) -> void:
 	match ext:
 		"csv":
 			table_data = _parse_csv_file(file_path)
-			# TODO: 获取列名和类型
+			# 列信息已在 _parse_csv_file 中填充到 _current_table_columns/_current_table_types
+			columns = _current_table_columns.duplicate()
+			types = _current_table_types.duplicate()
 		"json":
 			table_data = _parse_json_file(file_path)
+			# JSON 格式：需要从第一条数据推断列类型
+			columns = _extract_columns_from_json(table_data)
+			types = _extract_types_from_json(table_data)
 	
 	# 缓存数据表
 	_loaded_tables[table_name] = {
@@ -332,6 +497,45 @@ func _load_table_file(file_path: String) -> void:
 	
 	_update_status("已加载: " + table_name)
 
+## 从 JSON 数据提取列名
+func _extract_columns_from_json(data: Dictionary) -> Array[String]:
+	var columns: Array[String] = []
+	if data.is_empty():
+		return columns
+	
+	# 取第一条数据获取键名
+	var first_row = data.values()[0]
+	if typeof(first_row) == TYPE_DICTIONARY:
+		for key in first_row.keys():
+			columns.append(key)
+	
+	return columns
+
+## 从 JSON 数据推断列类型
+func _extract_types_from_json(data: Dictionary) -> Array[String]:
+	var types: Array[String] = []
+	if data.is_empty():
+		return types
+	
+	# 取第一条数据推断类型
+	var first_row = data.values()[0]
+	if typeof(first_row) == TYPE_DICTIONARY:
+		for key in first_row.keys():
+			var value = first_row[key]
+			var type_name = "string"
+			match typeof(value):
+				TYPE_INT:
+					type_name = "int"
+				TYPE_FLOAT:
+					type_name = "float"
+				TYPE_BOOL:
+					type_name = "bool"
+				TYPE_VECTOR2:
+					type_name = "vector2"
+			types.append(type_name)
+	
+	return types
+
 func _parse_csv_file(file_path: String) -> Dictionary:
 	var result = {}
 	var file = FileAccess.open(file_path, FileAccess.READ)
@@ -345,9 +549,13 @@ func _parse_csv_file(file_path: String) -> Dictionary:
 	# 读取类型
 	var data_types = file.get_csv_line(",")
 	
-	# 存储列信息
-	_current_table_columns = Array[data_names].duplicate()
-	_current_table_types = Array[data_types].duplicate()
+	# 存储列信息（转换为 Array）
+	_current_table_columns = []
+	for name in data_names:
+		_current_table_columns.append(name)
+	_current_table_types = []
+	for t in data_types:
+		_current_table_types.append(t)
 	
 	# 读取数据
 	while not file.eof_reached():
