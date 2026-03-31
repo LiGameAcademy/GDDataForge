@@ -109,7 +109,8 @@ func save_csv_file(
 	current_table: Dictionary,
 	current_table_columns: Array[String],
 	current_table_types: Array[String],
-	field_validation_rules: Dictionary
+	field_validation_rules: Dictionary,
+	row_order: Array[String] = []
 ) -> bool:
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if not file:
@@ -121,6 +122,7 @@ func save_csv_file(
 	file.store_csv_line(header, ",")
 	
 	var comments := PackedStringArray()
+	comments.append("")
 	for _col in current_table_columns:
 		comments.append("")
 	file.store_csv_line(comments, ",")
@@ -139,7 +141,16 @@ func save_csv_file(
 		validation_row.append(rules_str)
 	file.store_csv_line(validation_row, ",")
 	
-	for row_id in current_table.keys():
+	var row_ids: Array[String] = []
+	if not row_order.is_empty():
+		for rid in row_order:
+			if current_table.has(rid):
+				row_ids.append(rid)
+	else:
+		for rid in current_table.keys():
+			row_ids.append(String(rid))
+	
+	for row_id in row_ids:
 		var row_data = current_table[row_id]
 		var row := PackedStringArray()
 		row.append(str(row_id))
