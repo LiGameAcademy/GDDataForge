@@ -23,6 +23,28 @@ var _table_types: Array[String] = []   # 列类型数组
 var _primary_key: String = "ID"  # 默认主键
 var _foreign_keys: Array[Dictionary] = []  #  [{"field": "type_id", "target_table": "weapon_types", "target_field": "ID"}]
 
+## 字段校验规则定义
+# 格式: {column_name: "PRIMARY_KEY|REQUIRED|UNIQUE|RANGE:1-100|REGEX:^[a-z]+$|FOREIGN:table.field"}
+var _field_validation_rules: Dictionary = {}  # {field_name: ["REQUIRED", "UNIQUE", "RANGE:1-100"]}
+
+## 预定义校验规则枚举
+enum ValidationRuleType:
+    REQUIRED = "REQUIRED"      # 必填
+    UNIQUE = "UNIQUE"          # 唯一
+    PRIMARY_KEY = "PRIMARY_KEY" # 主键
+    RANGE = "RANGE"           # 范围: RANGE:min-max
+    REGEX = "REGEX"           # 正则: REGEX:pattern
+    MIN = "MIN"               # 最小值: MIN:n
+    MAX = "MAX"               # 最大值: MAX:n
+    FOREIGN = "FOREIGN"       # 外键: FOREIGN:table.field
+    EMAIL = "EMAIL"           # 邮箱格式
+    URL = "URL"               # URL 格式
+
+## 节点引用
+var _primary_key_option: OptionButton
+var _foreign_key_tree: Tree
+var _validation_panel: PanelContainer  # 字段校验规则面板
+
 ## 节点引用
 var _primary_key_option: OptionButton
 var _foreign_key_tree: Tree
@@ -235,7 +257,7 @@ func _create_editor_panel() -> void:
 	right_panel.add_child(right_vbox)
 	
 	var pk_title = Label.new()
-	pk_title.text = "主键/外键定义"
+	pk_title.text = "字段定义"
 	right_vbox.add_child(pk_title)
 	
 	# 主键选择
@@ -247,8 +269,31 @@ func _create_editor_panel() -> void:
 	pk_option.name = "PrimaryKeyOption"
 	pk_option.item_selected.connect(_on_primary_key_changed)
 	right_vbox.add_child(pk_option)
+	_primary_key_option = pk_option
 	
-	# 外键列表
+	# 校验规则标题
+	var val_title = Label.new()
+	val_title.text = "字段校验规则:"
+	right_vbox.add_child(val_title)
+	
+	# 校验规则滚动面板
+	var val_scroll = ScrollContainer.new()
+	val_scroll.name = "ValidationScroll"
+	val_scroll.size_flags_vertical = Control.SIZE_FLAG_EXPAND_FILL
+	right_vbox.add_child(val_scroll)
+	
+	var val_vbox = VBoxContainer.new()
+	val_vbox.name = "ValidationRules"
+	val_scroll.add_child(val_vbox)
+	
+	# 动态生成字段校验规则行
+	# 这里会在 _load_table_by_name 中动态创建
+	
+	# 分隔
+	var sep = HSeparator.new()
+	right_vbox.add_child(sep)
+	
+	# 外键引用
 	var fk_label = Label.new()
 	fk_label.text = "外键引用:"
 	right_vbox.add_child(fk_label)
@@ -257,6 +302,7 @@ func _create_editor_panel() -> void:
 	fk_tree.name = "ForeignKeyTree"
 	fk_tree.size_flags_vertical = Control.SIZE_FLAG_EXPAND_FILL
 	right_vbox.add_child(fk_tree)
+	_foreign_key_tree = fk_tree
 	
 	# 添加外键按钮
 	var btn_add_fk = Button.new()
@@ -348,6 +394,7 @@ func _add_row_with_dialog() -> void:
 	
 	_current_table[new_id] = row_data
 	_refresh_table_view()
+	_refresh_validation_rules_ui()
 	_update_status("已添加新行: " + new_id)
 	table_modified.emit(_current_table_name)
 
@@ -360,6 +407,7 @@ func _on_delete_row_pressed() -> void:
 	var row_id = _table_view.get_item_text(item, 0)
 	_current_table.erase(row_id)
 	_refresh_table_view()
+	_refresh_validation_rules_ui()
 	_update_status("已删除行: " + row_id)
 	table_modified.emit(_current_table_name)
 
@@ -576,8 +624,116 @@ func _load_table_by_name(table_name: String) -> void:
 	_refresh_table_view()
 	_refresh_primary_key_options()
 	_refresh_foreign_key_tree()
+	_refresh_validation_rules_ui()
 	_update_status("已加载: " + table_name + " | 主键: " + _primary_key)
 	table_selected.emit(table_name)
+
+## 刷新字段校验规则 UI
+func _refresh_validation_rules_ui() -> void:
+	# 查找校验规则容器并动态生成编辑控件
+	var val_container = _find_node_by_name(_editor_panel, "ValidationRules")
+	if not val_container:
+		return
+	
+	# 清空现有子节点（保留自动创建的）
+	for child in val_container.get_children():
+		child.queue_free()
+	
+	# 为每个字段创建校验规则编辑控件
+	for i in range(_current_table_columns.size()):
+		var col_name = _current_table_columns[i]
+		var col_type = _current_table_types[i] if i < _current_table_types.size() else "string"
+		
+		# 创建水平容器
+		var hbox = HBoxContainer.new()
+		val_container.add_child(hbox)
+		
+		# 字段名标签
+		var label = Label.new()
+		label.text = col_name + ":"
+		label.custom_minimum_size.x = 80
+		hbox.add_child(label)
+		
+		# 校验选项（多选复选框）
+		var check_container = HBoxContainer.new()
+		hbox.add_child(check_container)
+		
+		# REQUIRED 复选框
+		var chk_req = CheckBox.new()
+		chk_req.text = "必填"
+		chk_req.button_pressed.connect(_on_validation_rule_toggled.bind(col_name, "REQUIRED", chk_req))
+		if _field_validation_rules.has(col_name) and "REQUIRED" in _field_validation_rules[col_name]:
+			chk_req.button_pressed = true
+		check_container.add_child(chk_req)
+		
+		# UNIQUE 复选框
+		var chk_uni = CheckBox.new()
+		chk_uni.text = "唯一"
+		chk_uni.button_pressed.connect(_on_validation_rule_toggled.bind(col_name, "UNIQUE", chk_uni))
+		if _field_validation_rules.has(col_name) and "UNIQUE" in _field_validation_rules[col_name]:
+			chk_uni.button_pressed = true
+		check_container.add_child(chk_uni)
+		
+		# RANGE 输入（仅数字类型显示）
+		if col_type == "int" or col_type == "float":
+			var range_label = Label.new()
+			range_label.text = "范围:"
+			check_container.add_child(range_label)
+			
+			var range_edit = LineEdit.new()
+			range_edit.custom_minimum_size.x = 80
+			range_edit.placeholder_text = "1-100"
+			range_edit.text_entered.connect(_on_range_rule_changed.bind(col_name, range_edit))
+			check_container.add_child(range_edit)
+			
+			# 设置当前值
+			if _field_validation_rules.has(col_name):
+				for rule in _field_validation_rules[col_name]:
+					if rule.begins_with("RANGE:"):
+						range_edit.text = rule.substr(6)
+
+## 查找子节点辅助函数
+func _find_node_by_name(parent: Node, name: String) -> Node:
+	if parent.name == name:
+		return parent
+	for child in parent.get_children():
+		var found = _find_node_by_name(child, name)
+		if found:
+			return found
+	return null
+
+## 校验规则复选框变更
+func _on_validation_rule_toggled(col_name: String, rule: String, checkbox: CheckBox) -> void:
+	if not _field_validation_rules.has(col_name):
+		_field_validation_rules[col_name] = []
+	
+	if checkbox.button_pressed:
+		if rule not in _field_validation_rules[col_name]:
+			_field_validation_rules[col_name].append(rule)
+	else:
+		_field_validation_rules[col_name].erase(rule)
+	
+	table_modified.emit(_current_table_name)
+	_update_status("字段 %s 规则已更新" % col_name)
+
+## 范围规则变更
+func _on_range_rule_changed(col_name: String, line_edit: LineEdit) -> void:
+	var range_value = line_edit.text.strip_edges()
+	if range_value.is_empty():
+		if _field_validation_rules.has(col_name):
+			_field_validation_rules[col_name].erase("RANGE:" + range_value)
+	else:
+		if not _field_validation_rules.has(col_name):
+			_field_validation_rules[col_name] = []
+		# 移除旧的 RANGE 规则
+		var old_rules = _field_validation_rules[col_name].duplicate()
+		for r in old_rules:
+			if r.begins_with("RANGE:"):
+				_field_validation_rules[col_name].erase(r)
+		# 添加新的 RANGE 规则
+		_field_validation_rules[col_name].append("RANGE:" + range_value)
+	
+	table_modified.emit(_current_table_name)
 
 ## 刷新主键下拉选项
 func _refresh_primary_key_options() -> void:
@@ -783,6 +939,27 @@ func _parse_csv_file(file_path: String) -> Dictionary:
 	# 读取类型
 	var data_types = file.get_csv_line(",")
 	
+	# 读取校验规则（可选，第4行）
+	var validation_rules_line = PackedStringArray()
+	if not file.eof_reached():
+		validation_rules_line = file.get_csv_line(",")
+	
+	# 解析校验规则
+	_field_validation_rules = {}
+	if not validation_rules_line.is_empty():
+		for i in range(data_names.size()):
+			if i >= validation_rules_line.size():
+				break
+			var rule_str = validation_rules_line[i]
+			if rule_str.is_empty():
+				continue
+			var col_name = data_names[i]
+			var rules = rule_str.split("|")
+			_field_validation_rules[col_name] = []
+			for rule in rules:
+				if not rule.is_empty():
+					_field_validation_rules[col_name].append(rule)
+	
 	# 存储列信息（转换为 Array）
 	_current_table_columns = []
 	for name in data_names:
@@ -888,9 +1065,19 @@ func _save_csv_file(file_path: String) -> void:
 	
 	# 写入类型
 	var types = PackedStringArray()
-	types.append("string")  # ID ��型
+	types.append("string")  # ID 类型
 	types.append_array(_current_table_types)
 	file.store_csv_line(types, ",")
+	
+	# 写入校验规则（第4行）
+	var validation_row = PackedStringArray()
+	validation_row.append("")  # ID 列无校验
+	for col in _current_table_columns:
+		var rules_str = ""
+		if _field_validation_rules.has(col):
+			rules_str = "|".join(_field_validation_rules[col])
+		validation_row.append(rules_str)
+	file.store_csv_line(validation_row, ",")
 	
 	# 写入数据
 	for row_id in _current_table.keys():
@@ -909,8 +1096,19 @@ func _save_json_file(file_path: String) -> void:
 		_update_status("无法保存文件")
 		return
 	
-	# 简单的 JSON 序列化
-	var json_string = JSON.stringify(_current_table, "\t")
+	# 构建带校验规则元数据的 JSON
+	var output = {
+		"_meta": {
+			"primary_key": _primary_key,
+			"columns": _current_table_columns,
+			"types": _current_table_types,
+			"validation_rules": _field_validation_rules,
+			"foreign_keys": _foreign_keys
+		},
+		"_data": _current_table
+	}
+	
+	var json_string = JSON.stringify(output, "\t")
 	file.store_string(json_string)
 	file.close()
 
