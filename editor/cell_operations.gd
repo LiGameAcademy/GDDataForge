@@ -1,3 +1,15 @@
+extends Node
+class_name CellOperations
+
+signal table_modified(table_name: String)
+
+var _current_table: Dictionary = {}
+var _current_table_name: String = ""
+var _current_table_columns: Array[String] = []
+var _current_table_types: Array[String] = []
+var _table_view: Tree
+var _status_label: Label
+
 ## 添加行操作
 
 func add_row(row_id: String, row_data: Dictionary) -> void:
@@ -85,3 +97,13 @@ func _validate_and_convert_value(value: Variant, expected_type: String) -> Varia
 					return Vector2(parts[0].to_float(), parts[1].to_float())
 			return value
 	return value
+
+## 更新状态显示（独立模块兜底实现）
+func _update_status(text: String) -> void:
+	if _status_label:
+		_status_label.text = text
+	print("[CellOperations] ", text)
+
+func _refresh_table_view() -> void:
+	# 该模块当前仅保留轻量兜底实现，实际渲染由主编辑器控制器负责。
+	pass

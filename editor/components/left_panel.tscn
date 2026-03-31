@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://ik2uu23vtisl"]
+
+[ext_resource type="Script" uid="uid://luxlpw77aohg" path="res://addons/GDDataForge/editor/components/left_panel.gd" id="1_n8mm7"]
+
+[node name="LeftPanel" type="PanelContainer" unique_id=1610866198]
+custom_minimum_size = Vector2(220, 0)
+offset_right = 220.0
+offset_bottom = 376.0
+script = ExtResource("1_n8mm7")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1411563811]
+layout_mode = 2
+
+[node name="LeftTitle" type="Label" parent="VBox" unique_id=1428460959]
+unique_name_in_owner = true
+layout_mode = 2
+text = "数据表"
+
+[node name="ListScroll" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TableList" type="ItemList" parent="VBox/ListScroll" unique_id=807201446]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3

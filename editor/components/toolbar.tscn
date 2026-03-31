@@ -1,0 +1,129 @@
+[gd_scene format=3 uid="uid://ci2sl3jyhd2bv"]
+
+[ext_resource type="Script" uid="uid://c013mp7bnw5ch" path="res://addons/GDDataForge/editor/components/toolbar.gd" id="1_05k4q"]
+
+[node name="Toolbar" type="MarginContainer" unique_id=409577042]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 31.0
+grow_horizontal = 2
+script = ExtResource("1_05k4q")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=502475364]
+layout_mode = 2
+
+[node name="BtnNew" type="Button" parent="HBoxContainer" unique_id=1470576343]
+unique_name_in_owner = true
+layout_mode = 2
+text = "新建表"
+
+[node name="BtnOpen" type="Button" parent="HBoxContainer" unique_id=151046176]
+unique_name_in_owner = true
+layout_mode = 2
+text = "打开表"
+
+[node name="BtnSave" type="Button" parent="HBoxContainer" unique_id=1406087671]
+unique_name_in_owner = true
+layout_mode = 2
+text = "保存"
+
+[node name="SepA" type="VSeparator" parent="HBoxContainer" unique_id=630155505]
+layout_mode = 2
+
+[node name="BtnAddRow" type="Button" parent="HBoxContainer" unique_id=124607931]
+unique_name_in_owner = true
+layout_mode = 2
+text = "+ 行"
+
+[node name="BtnDelRow" type="Button" parent="HBoxContainer" unique_id=342698004]
+unique_name_in_owner = true
+layout_mode = 2
+text = "- 行"
+
+[node name="SepB" type="VSeparator" parent="HBoxContainer" unique_id=1091846494]
+layout_mode = 2
+
+[node name="BtnUndo" type="Button" parent="HBoxContainer" unique_id=1501340063]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "↩ 撤销"
+
+[node name="BtnRedo" type="Button" parent="HBoxContainer" unique_id=2001620484]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "↪ 重做"
+
+[node name="BtnAddCol" type="Button" parent="HBoxContainer" unique_id=1384086128]
+unique_name_in_owner = true
+layout_mode = 2
+text = "+ 列"
+
+[node name="BtnDelCol" type="Button" parent="HBoxContainer" unique_id=655571314]
+unique_name_in_owner = true
+layout_mode = 2
+text = "- 列"
+
+[node name="SepC" type="VSeparator" parent="HBoxContainer" unique_id=563959083]
+layout_mode = 2
+
+[node name="BtnValidate" type="Button" parent="HBoxContainer" unique_id=200571511]
+unique_name_in_owner = true
+layout_mode = 2
+text = "校验"
+
+[node name="SepD" type="VSeparator" parent="HBoxContainer" unique_id=1678038070]
+layout_mode = 2
+
+[node name="SearchInput" type="LineEdit" parent="HBoxContainer" unique_id=1000428608]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+placeholder_text = "搜索..."
+
+[node name="SearchColumnOption" type="OptionButton" parent="HBoxContainer" unique_id=43610556]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+
+[node name="FilterColumnOption" type="OptionButton" parent="HBoxContainer" unique_id=1589235289]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+
+[node name="FilterValueInput" type="LineEdit" parent="HBoxContainer" unique_id=274386753]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+placeholder_text = "过滤值..."
+
+[node name="BtnClearFilter" type="Button" parent="HBoxContainer" unique_id=610041836]
+unique_name_in_owner = true
+layout_mode = 2
+text = "清除"
+
+[node name="BtnImport" type="Button" parent="HBoxContainer" unique_id=42621297]
+unique_name_in_owner = true
+layout_mode = 2
+text = "导入"
+
+[node name="BtnExport" type="Button" parent="HBoxContainer" unique_id=611193035]
+unique_name_in_owner = true
+layout_mode = 2
+text = "导出"
+
+[node name="BtnBatchImport" type="Button" parent="HBoxContainer" unique_id=241562717]
+unique_name_in_owner = true
+layout_mode = 2
+text = "批量导入"
+
+[node name="BtnBatchExport" type="Button" parent="HBoxContainer" unique_id=887799213]
+unique_name_in_owner = true
+layout_mode = 2
+text = "批量导出"
+
+[node name="ChkHotLoad" type="CheckBox" parent="HBoxContainer" unique_id=1687515697]
+unique_name_in_owner = true
+layout_mode = 2
+text = "热加载"

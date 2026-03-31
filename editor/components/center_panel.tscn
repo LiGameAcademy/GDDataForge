@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://dfewj5o173sgg"]
+
+[ext_resource type="Script" uid="uid://dhpcqw0k1ied4" path="res://addons/GDDataForge/editor/components/center_panel.gd" id="1_pm6wl"]
+
+[node name="CenterPanel" type="PanelContainer" unique_id=533170616]
+offset_right = 247.0
+offset_bottom = 328.0
+size_flags_horizontal = 3
+script = ExtResource("1_pm6wl")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=940783996]
+layout_mode = 2
+
+[node name="CenterTitle" type="Label" parent="VBox" unique_id=1347934864]
+layout_mode = 2
+text = "表格内容"
+
+[node name="TableScroll" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="TableView" type="GridContainer" parent="VBox/TableScroll" unique_id=936784328]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 1

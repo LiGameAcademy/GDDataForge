@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://cx1qdkq7xny2b"]
+
+[ext_resource type="Script" uid="uid://de6gkfr35o874" path="res://addons/GDDataForge/editor/data_table_editor_panel.gd" id="1_y1ujy"]
+[ext_resource type="PackedScene" uid="uid://ci2sl3jyhd2bv" path="res://addons/GDDataForge/editor/components/toolbar.tscn" id="2_en7fn"]
+[ext_resource type="PackedScene" uid="uid://ik2uu23vtisl" path="res://addons/GDDataForge/editor/components/left_panel.tscn" id="3_0iyfo"]
+[ext_resource type="PackedScene" uid="uid://dfewj5o173sgg" path="res://addons/GDDataForge/editor/components/center_panel.tscn" id="4_rxr50"]
+[ext_resource type="PackedScene" uid="uid://caik533qthwti" path="res://addons/GDDataForge/editor/components/right_panel.tscn" id="5_iwty7"]
+
+[node name="DataTableEditorPanel" type="PanelContainer" unique_id=1761445151]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_y1ujy")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=146707049]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Toolbar" parent="VBox" unique_id=190588739 instance=ExtResource("2_en7fn")]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="VBox" unique_id=1394355292]
+layout_mode = 2
+
+[node name="MainContent" type="HSplitContainer" parent="VBox" unique_id=687106274]
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(300, 0)
+split_offset = 300
+
+[node name="LeftPanel" parent="VBox/MainContent" unique_id=415685553 instance=ExtResource("3_0iyfo")]
+layout_mode = 2
+
+[node name="CenterPanel" parent="VBox/MainContent" unique_id=868751052 instance=ExtResource("4_rxr50")]
+layout_mode = 2
+
+[node name="RightPanel" parent="VBox/MainContent" unique_id=1640074771 instance=ExtResource("5_iwty7")]
+layout_mode = 2
+
+[node name="StatusBar" type="Label" parent="VBox" unique_id=978251612]
+layout_mode = 2
+text = "就绪"

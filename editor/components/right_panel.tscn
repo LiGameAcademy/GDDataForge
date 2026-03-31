@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://caik533qthwti"]
+
+[ext_resource type="Script" uid="uid://cdd56tfkgat1i" path="res://addons/GDDataForge/editor/components/right_panel.gd" id="1_88rmy"]
+
+[node name="RightPanel" type="PanelContainer" unique_id=372960025]
+custom_minimum_size = Vector2(300, 0)
+offset_right = 300.0
+offset_bottom = 639.0
+script = ExtResource("1_88rmy")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=502989011]
+layout_mode = 2
+
+[node name="FieldsTitle" type="Label" parent="VBox" unique_id=1558785313]
+layout_mode = 2
+text = "字段定义"
+
+[node name="PrimaryKeyLabel" type="Label" parent="VBox" unique_id=1039856641]
+layout_mode = 2
+text = "主键字段:"
+
+[node name="PrimaryKeyOption" type="OptionButton" parent="VBox" unique_id=691804257]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ValidationTitle" type="Label" parent="VBox" unique_id=1867235945]
+layout_mode = 2
+text = "字段校验规则:"
+
+[node name="ValidationScroll" type="ScrollContainer" parent="VBox" unique_id=1308796536]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ValidationRules" type="VBoxContainer" parent="VBox/ValidationScroll" unique_id=1333934721]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Separator" type="HSeparator" parent="VBox" unique_id=1194833146]
+layout_mode = 2
+
+[node name="ForeignKeyLabel" type="Label" parent="VBox" unique_id=669674817]
+layout_mode = 2
+text = "外键引用:"
+
+[node name="ForeignKeyTree" type="Tree" parent="VBox" unique_id=1341007628]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnAddForeignKey" type="Button" parent="VBox" unique_id=1642474125]
+unique_name_in_owner = true
+layout_mode = 2
+text = "+ 添加外键"
+
+[node name="BtnDeleteForeignKey" type="Button" parent="VBox" unique_id=622815941]
+unique_name_in_owner = true
+layout_mode = 2
+text = "- 删除外键"
