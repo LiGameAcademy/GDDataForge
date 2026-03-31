@@ -19,6 +19,14 @@ var _current_table_name: String = ""
 var _table_columns: Array[String] = []  # 列名数组
 var _table_types: Array[String] = []   # 列类型数组
 
+## 主键/外键定义
+var _primary_key: String = "ID"  # 默认主键
+var _foreign_keys: Array[Dictionary] = []  #  [{"field": "type_id", "target_table": "weapon_types", "target_field": "ID"}]
+
+## 节点引用
+var _primary_key_option: OptionButton
+var _foreign_key_tree: Tree
+
 ## 加载的数据表缓存
 var _loaded_tables: Dictionary = {}  # {table_name: {data: {}, columns: [], types: []}}
 
@@ -141,6 +149,13 @@ func _create_editor_panel() -> void:
 	var sep2 = HSeparator.new()
 	toolbar.add_child(sep2)
 	
+	# 校验按钮
+	var btn_validate = Button.new()
+	btn_validate.text = "校验"
+	btn_validate.name = "BtnValidate"
+	btn_validate.pressed.connect(_on_validate_pressed)
+	toolbar.add_child(btn_validate)
+	
 	# 导入按钮
 	var btn_import = Button.new()
 	btn_import.text = "导入"
@@ -187,18 +202,18 @@ func _create_editor_panel() -> void:
 	_table_list.item_activated.connect(_on_table_list_item_activated)
 	left_vbox.add_child(_table_list)
 	
-	# ----- 右侧：表格视图 -----
-	var right_panel = PanelContainer.new()
-	right_panel.name = "RightPanel"
-	main_split.add_child(right_panel)
+	# ----- 中间：表格视图 -----
+	var center_panel = PanelContainer.new()
+	center_panel.name = "CenterPanel"
+	main_split.add_child(center_panel)
 	
-	var right_vbox = VBoxContainer.new()
-	right_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	right_panel.add_child(right_vbox)
+	var center_vbox = VBoxContainer.new()
+	center_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center_panel.add_child(center_vbox)
 	
-	var right_title = Label.new()
-	right_title.text = "表格内容"
-	right_vbox.add_child(right_title)
+	var center_title = Label.new()
+	center_title.text = "表格内容"
+	center_vbox.add_child(center_title)
 	
 	_table_view = Tree.new()
 	_table_view.name = "TableView"
@@ -208,7 +223,52 @@ func _create_editor_panel() -> void:
 	_table_view.column_titles_visible = true
 	_table_view.item_activated.connect(_on_table_view_item_activated)
 	_table_view.item_changed.connect(_on_table_view_item_changed)
-	right_vbox.add_child(_table_view)
+	center_vbox.add_child(_table_view)
+	
+	# ----- 右侧：主键/外键定义 -----
+	var right_panel = PanelContainer.new()
+	right_panel.name = "RightPanel"
+	main_split.add_child(right_panel)
+	
+	var right_vbox = VBoxContainer.new()
+	right_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	right_panel.add_child(right_vbox)
+	
+	var pk_title = Label.new()
+	pk_title.text = "主键/外键定义"
+	right_vbox.add_child(pk_title)
+	
+	# 主键选择
+	var pk_label = Label.new()
+	pk_label.text = "主键字段:"
+	right_vbox.add_child(pk_label)
+	
+	var pk_option = OptionButton.new()
+	pk_option.name = "PrimaryKeyOption"
+	pk_option.item_selected.connect(_on_primary_key_changed)
+	right_vbox.add_child(pk_option)
+	
+	# 外键列表
+	var fk_label = Label.new()
+	fk_label.text = "外键引用:"
+	right_vbox.add_child(fk_label)
+	
+	var fk_tree = Tree.new()
+	fk_tree.name = "ForeignKeyTree"
+	fk_tree.size_flags_vertical = Control.SIZE_FLAG_EXPAND_FILL
+	right_vbox.add_child(fk_tree)
+	
+	# 添加外键按钮
+	var btn_add_fk = Button.new()
+	btn_add_fk.text = "+ 添加外键"
+	btn_add_fk.pressed.connect(_on_add_foreign_key_pressed)
+	right_vbox.add_child(btn_add_fk)
+	
+	# 删除外键按钮
+	var btn_del_fk = Button.new()
+	btn_del_fk.text = "- 删除外键"
+	btn_del_fk.pressed.connect(_on_delete_foreign_key_pressed)
+	right_vbox.add_child(btn_del_fk)
 	
 	# ===== 状态栏 =====
 	_status_label = Label.new()
@@ -343,7 +403,135 @@ func _on_import_pressed() -> void:
 func _on_export_pressed() -> void:
 	_update_status("导出功能开发中...")
 
-## ===== 数据表列表 =====
+## ===== 主键/外键操作 =====
+
+## 主键选择变更
+func _on_primary_key_changed(index: int) -> void:
+	if index == 0:
+		_primary_key = ""
+	else:
+		_primary_key = _current_table_columns[index - 1]
+	
+	# 保存到缓存
+	if _loaded_tables.has(_current_table_name):
+		_loaded_tables[_current_table_name]["primary_key"] = _primary_key
+	
+	_update_status("主键已设置为: " + _primary_key if not _primary_key.is_empty() else "无主键")
+	table_modified.emit(_current_table_name)
+
+## 添加外键
+func _on_add_foreign_key_pressed() -> void:
+	if _current_table_columns.is_empty():
+		_update_status("请先加载数据表")
+		return
+	
+	# 简单实现：使用第一个列作为外键字段，弹窗选择目标表
+	var sample_fk = {
+		"field": _current_table_columns[0] if _current_table_columns.size() > 0 else "",
+		"target_table": "target_table",
+		"target_field": "ID"
+	}
+	_foreign_keys.append(sample_fk)
+	_refresh_foreign_key_tree()
+	_update_status("已添加外键引用")
+	table_modified.emit(_current_table_name)
+
+## 删除外键
+func _on_delete_foreign_key_pressed() -> void:
+	var item = _foreign_key_tree.get_selected()
+	if not item:
+		_update_status("请先选择要删除的外键")
+		return
+	
+	var fk = item.get_metadata(0)
+	if fk in _foreign_keys:
+		_foreign_keys.erase(fk)
+	_refresh_foreign_key_tree()
+	_update_status("已删除外键引用")
+	table_modified.emit(_current_table_name)
+
+## ===== 数据校验 =====
+
+func _on_validate_pressed() -> void:
+	_validate_current_table()
+
+## 校验当前数据表
+func _validate_current_table() -> void:
+	if _current_table.is_empty():
+		_update_status("没有数据可校验")
+		return
+	
+	var issues: Array[String] = []
+	
+	# 1. 主键校验
+	if not _primary_key.is_empty():
+		var pk_values: Dictionary = {}
+		for row_id in _current_table.keys():
+			var pk_value = _current_table[row_id].get(_primary_key, "")
+			if pk_value.is_empty():
+				issues.append("行 %s: 主键为空" % row_id)
+			elif pk_values.has(pk_value):
+				issues.append("行 %s: 主键重复 '%s'" % [row_id, pk_value])
+			else:
+				pk_values[pk_value] = row_id
+		
+		if pk_values.size() == _current_table.size():
+			issues.append("✅ 主键唯一性校验通过 (%d 行)" % pk_values.size())
+	
+	# 2. 外键校验
+	for fk in _foreign_keys:
+		var fk_field = fk.get("field", "")
+		var target_table = fk.get("target_table", "")
+		var target_field = fk.get("target_field", "")
+		
+		if target_table.is_empty() or not _loaded_tables.has(target_table):
+			issues.append("⚠️ 外键目标表不存在: " + target_table)
+			continue
+		
+		# 获取目标表的字段值集合
+		var target_values = {}
+		var target_data = _loaded_tables[target_table].get("data", {})
+		for row_id in target_data.keys():
+			target_values[target_data[row_id].get(target_field, "")] = true
+		
+		# 检查当前表的外键引用
+		var fk_issues = 0
+		for row_id in _current_table.keys():
+			var fk_value = _current_table[row_id].get(fk_field, "")
+			if not fk_value.is_empty() and not target_values.has(fk_value):
+				fk_issues += 1
+				if fk_issues <= 3:  # 只显示前3个错误
+					issues.append("行 %s: 外键 '%s' 值 '%s' 在目标表不存在" % [row_id, fk_field, fk_value])
+		
+		if fk_issues == 0:
+			issues.append("✅ 外键 %s → %s.%s 校验通过" % [fk_field, target_table, target_field])
+		else:
+			issues.append("⚠️ 外键 %s: %d 个无效引用" % [fk_field, fk_issues])
+	
+	# 显示校验结果
+	if issues.is_empty():
+		_update_status("✅ 校验通过")
+	else:
+		var error_count = 0
+		var warning_count = 0
+		for issue in issues:
+			if issue.begins_with("⚠️"):
+				warning_count += 1
+			elif issue.begins_with("✅"):
+				pass  # 成功消息
+			else:
+				error_count += 1
+		
+		var status = "校验完成"
+		if error_count > 0:
+			status += " | 🔴 %d 错误" % error_count
+		if warning_count > 0:
+			status += " | 🟡 %d 警告" % warning_count
+		
+		_update_status(status)
+		print("[GDDataForge] 校验结果:")
+		for issue in issues:
+			print("  ", issue)
 
 func _on_table_list_item_selected() -> void:
 	var item = _table_list.get_selected()
@@ -379,9 +567,53 @@ func _load_table_by_name(table_name: String) -> void:
 	_current_table_columns = _loaded_tables[table_name].get("columns", [])
 	_current_table_types = _loaded_tables[table_name].get("types", [])
 	
+	# 加载主键/外键定义
+	if _loaded_tables[table_name].has("primary_key"):
+		_primary_key = _loaded_tables[table_name].get("primary_key", "ID")
+	if _loaded_tables[table_name].has("foreign_keys"):
+		_foreign_keys = _loaded_tables[table_name].get("foreign_keys", [])
+	
 	_refresh_table_view()
-	_update_status("已加载: " + table_name)
+	_refresh_primary_key_options()
+	_refresh_foreign_key_tree()
+	_update_status("已加载: " + table_name + " | 主键: " + _primary_key)
 	table_selected.emit(table_name)
+
+## 刷新主键下拉选项
+func _refresh_primary_key_options() -> void:
+	if not _primary_key_option:
+		return
+	
+	_primary_key_option.clear()
+	
+	# 添加"无主键"选项
+	_primary_key_option.add_item("(无)", 0)
+	
+	# 添加所有列作为主键选项
+	for i in range(_current_table_columns.size()):
+		_primary_key_option.add_item(_current_table_columns[i], i + 1)
+	
+	# 设置当前主键
+	var current_idx = _current_table_columns.find(_primary_key)
+	if current_idx >= 0:
+		_primary_key_option.select(current_idx + 1)
+	else:
+		_primary_key_option.select(0)
+
+## 刷新外键树
+func _refresh_foreign_key_tree() -> void:
+	if not _foreign_key_tree:
+		return
+	
+	_foreign_key_tree.clear()
+	var root = _foreign_key_tree.create_item()
+	root.text = "外键引用"
+	root.collapsed = true
+	
+	for fk in _foreign_keys:
+		var item = _foreign_key_tree.create_item(root)
+		item.text = "%s → %s.%s" % [fk.get("field", "?"), fk.get("target_table", "?"), fk.get("target_field", "?")]
+		item.set_metadata(0, fk)
 
 ## 刷新表格视图
 func _refresh_table_view() -> void:
@@ -486,7 +718,9 @@ func _load_table_file(file_path: String) -> void:
 		"data": table_data,
 		"path": file_path,
 		"columns": columns,
-		"types": types
+		"types": types,
+		"primary_key": _primary_key,
+		"foreign_keys": _foreign_keys
 	}
 	
 	# 刷新列表
