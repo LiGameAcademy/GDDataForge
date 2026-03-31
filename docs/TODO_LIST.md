@@ -53,6 +53,12 @@
 - [x] 添加/删除外键
 - [x] 校验按钮 (一键校验)
 
+### 2.5 校验规则扩展
+- [x] 内置校验规则 (REQUIRED, UNIQUE, RANGE, REGEX, EMAIL, URL, MIN, MAX)
+- [x] 自定义校验规则接口 (register_validation_rule)
+- [x] 校验规则注册表 (_validation_rule_registry)
+- [x] 可扩展架构
+
 ---
 
 ## 阶段三：高级功能

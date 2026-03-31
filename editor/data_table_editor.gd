@@ -39,6 +39,28 @@ enum ValidationRuleType:
     FOREIGN = "FOREIGN"       # 外键: FOREIGN:table.field
     EMAIL = "EMAIL"           # 邮箱格式
     URL = "URL"               # URL 格式
+    CUSTOM = "CUSTOM"         # 自定义: CUSTOM:function_name
+
+## 校验规则定义类
+class ValidationRule:
+    var name: String
+    var display_name: String
+    var description: String
+    var param_required: bool  # 是否需要参数
+    var apply_types: Array[String]  # 适用的字段类型
+    
+    func _init(n: String, dn: String, desc: String, param: bool = false, types: Array[String] = []):
+        name = n
+        display_name = dn
+        description = desc
+        param_required = param
+        apply_types = types
+
+## 内置校验规则注册表
+var _validation_rule_registry: Array[ValidationRule] = []
+
+## 字段校验规则定义
+# 格式: {column_name: "PRIMARY_KEY|REQUIRED|UNIQUE|RANGE:1-100|REGEX:^[a-z]+$"}
 
 ## 节点引用
 var _primary_key_option: OptionButton
@@ -83,8 +105,79 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_READY:
 			_create_editor_panel()
+			_register_default_validation_rules()
 		NOTIFICATION_PREDELETE:
 			_save_current_table()
+
+## 注册默认校验规则
+func _register_default_validation_rules() -> void:
+	_validation_rule_registry = []
+	
+	# REQUIRED - 必填
+	_validation_rule_registry.append(ValidationRule.new(
+		"REQUIRED", "必填", "字段值不能为空", false, ["string", "int", "float"]))
+	
+	# UNIQUE - 唯一
+	_validation_rule_registry.append(ValidationRule.new(
+		"UNIQUE", "唯一", "字段值不能重复", false, ["string", "int", "float"]))
+	
+	# PRIMARY_KEY - 主键
+	_validation_rule_registry.append(ValidationRule.new(
+		"PRIMARY_KEY", "主键", "作为表的主键", false, ["string", "int"]))
+	
+	# RANGE - 数值范围
+	_validation_rule_registry.append(ValidationRule.new(
+		"RANGE", "范围", "数值必须落在指定范围内", true, ["int", "float"]))
+	
+	# MIN - 最小值
+	_validation_rule_registry.append(ValidationRule.new(
+		"MIN", "最小值", "数值必须大于等于指定值", true, ["int", "float"]))
+	
+	# MAX - 最大值
+	_validation_rule_registry.append(ValidationRule.new(
+		"MAX", "最大值", "数值必须小于等于指定值", true, ["int", "float"]))
+	
+	# REGEX - 正则表达式
+	_validation_rule_registry.append(ValidationRule.new(
+		"REGEX", "正则", "必须匹配指定的正则表达式", true, ["string"]))
+	
+	# EMAIL - 邮箱
+	_validation_rule_registry.append(ValidationRule.new(
+		"EMAIL", "邮箱", "必须是有效的邮箱格式", false, ["string"]))
+	
+	# URL - 网址
+	_validation_rule_registry.append(ValidationRule.new(
+		"URL", "网址", "必须是有效的URL格式", false, ["string"]))
+	
+	# CUSTOM - 自定义函数
+	_validation_rule_registry.append(ValidationRule.new(
+		"CUSTOM", "自定义", "调用自定义校验函数", true, ["string", "int", "float", "bool", "vector2"]))
+	
+	print("[GDDataForge] 已注册 %d 个校验规则" % _validation_rule_registry.size())
+
+## 注册自定义校验规则（供外部调用）
+func register_validation_rule(rule: ValidationRule) -> void:
+	_validation_rule_registry.append(rule)
+	print("[GDDataForge] 已注册自定义校验规则: %s" % rule.name)
+
+## 移除自定义校验规则
+func unregister_validation_rule(rule_name: String) -> void:
+	var index = _validation_rule_registry.find_custom(func(r): return r.name == rule_name)
+	if index >= 0:
+		_validation_rule_registry.remove_at(index)
+		print("[GDDataForge] 已移除校验规则: %s" % rule_name)
+
+## 获取校验规则列表
+func get_validation_rules() -> Array[ValidationRule]:
+	return _validation_rule_registry
+
+## 获取适用当前字段类型的校验规则
+func get_applicable_rules(field_type: String) -> Array[ValidationRule]:
+	var result: Array[ValidationRule] = []
+	for rule in _validation_rule_registry:
+		if rule.apply_types.is_empty() or field_type in rule.apply_types:
+			result.append(rule)
+	return result
 
 ## 创建编辑器面板
 func _create_editor_panel() -> void:
@@ -1008,7 +1101,22 @@ func _parse_json_file(file_path: String) -> Dictionary:
 	
 	var json_data = json.get_data()
 	if typeof(json_data) == TYPE_DICTIONARY:
-		result = json_data
+		# 检查是否带有 _meta
+		if json_data.has("_meta"):
+			var meta = json_data["_meta"]
+			if meta.has("validation_rules"):
+				_field_validation_rules = meta["validation_rules"]
+			if meta.has("primary_key"):
+				_primary_key = meta["primary_key"]
+			if meta.has("foreign_keys"):
+				_foreign_keys = meta["foreign_keys"]
+			if meta.has("_data"):
+				result = meta["_data"]
+			else:
+				result = json_data.duplicate()
+				result.erase("_meta")
+		else:
+			result = json_data
 	
 	return result
 
