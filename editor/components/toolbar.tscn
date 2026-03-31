@@ -55,15 +55,10 @@ layout_mode = 2
 disabled = true
 text = "↪ 重做"
 
-[node name="BtnAddCol" type="Button" parent="HBoxContainer" unique_id=1384086128]
+[node name="BtnAddField" type="Button" parent="HBoxContainer" unique_id=1384086128]
 unique_name_in_owner = true
 layout_mode = 2
-text = "+ 列"
-
-[node name="BtnDelCol" type="Button" parent="HBoxContainer" unique_id=655571314]
-unique_name_in_owner = true
-layout_mode = 2
-text = "- 列"
+text = "添加字段"
 
 [node name="SepC" type="VSeparator" parent="HBoxContainer" unique_id=563959083]
 layout_mode = 2

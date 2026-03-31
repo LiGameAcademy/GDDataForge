@@ -12,10 +12,11 @@ script = ExtResource("1_pm6wl")
 layout_mode = 2
 
 [node name="CenterTitle" type="Label" parent="VBox" unique_id=1347934864]
+visible = false
 layout_mode = 2
 text = "表格内容"
 
-[node name="TableScroll" type="ScrollContainer" parent="VBox"]
+[node name="TableScroll" type="ScrollContainer" parent="VBox" unique_id=1590402779]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -24,4 +25,3 @@ size_flags_vertical = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-columns = 1

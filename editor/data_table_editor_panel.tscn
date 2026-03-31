@@ -27,7 +27,7 @@ layout_mode = 2
 [node name="MainContent" type="HSplitContainer" parent="VBox" unique_id=687106274]
 layout_mode = 2
 size_flags_vertical = 3
-split_offsets = PackedInt32Array(300, 0)
+split_offsets = PackedInt32Array(300)
 split_offset = 300
 
 [node name="LeftPanel" parent="VBox/MainContent" unique_id=415685553 instance=ExtResource("3_0iyfo")]
@@ -37,6 +37,7 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="RightPanel" parent="VBox/MainContent" unique_id=1640074771 instance=ExtResource("5_iwty7")]
+visible = false
 layout_mode = 2
 
 [node name="StatusBar" type="Label" parent="VBox" unique_id=978251612]
