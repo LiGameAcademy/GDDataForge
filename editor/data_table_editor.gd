@@ -229,6 +229,14 @@ var _foreign_key_tree: Tree
 ## 加载的数据表缓存
 var _loaded_tables: Dictionary = {}  # {table_name: {data: {}, columns: [], types: []}}
 
+## 热加载系统
+var _hot_load_enabled: bool = false
+var _hot_load_timer: Timer
+var _file_mod_times: Dictionary = {}  # {file_path: last_modified_time}
+
+## 热加载设置
+const HOT_LOAD_INTERVAL: float = 2.0  # 秒
+
 func _enter_tree() -> void:
 	# 确保主插件已加载
 	_make_visible(false)
@@ -502,6 +510,26 @@ func _create_editor_panel() -> void:
 	btn_export.name = "BtnExport"
 	btn_export.pressed.connect(_on_export_pressed)
 	toolbar.add_child(btn_export)
+	
+	# 批量导入按钮
+	var btn_batch_import = Button.new()
+	btn_batch_import.text = "批量导入"
+	btn_batch_import.name = "BtnBatchImport"
+	btn_batch_import.pressed.connect(_on_batch_import_pressed)
+	toolbar.add_child(btn_batch_import)
+	
+	# 批量导出按钮
+	var btn_batch_export = Button.new()
+	btn_batch_export.text = "批量导出"
+	btn_batch_export.name = "BtnBatchExport"
+	btn_batch_export.pressed.connect(_on_batch_export_pressed)
+	toolbar.add_child(btn_batch_export)
+	
+	# 热加载开关
+	var chk_hot_load = CheckBox.new()
+	chk_hot_load.text = "热加载"
+	chk_hot_load.button_toggled.connect(_on_hot_load_toggled)
+	toolbar.add_child(chk_hot_load)
 	
 	# ===== 分隔线 =====
 	var hsep = HSeparator.new()
@@ -790,6 +818,171 @@ func _on_import_pressed() -> void:
 
 func _on_export_pressed() -> void:
 	_update_status("导出功能开发中...")
+
+## ===== 批量导入/导出 =====
+
+## 批量导入
+func _on_batch_import_pressed() -> void:
+	# 扫描 data 文件夹下的所有 CSV/JSON 文件
+	var data_folder = "res://addons/GDDataForge/examples/data_table"
+	if not DirAccess.dir_exists_absolute(data_folder):
+		# 尝试其他可能的数据目录
+		data_folder = "res://data"
+	
+	var files = _scan_data_files(data_folder)
+	if files.is_empty():
+		_update_status("未找到数据文件")
+		return
+	
+	var imported_count = 0
+	for file_path in files:
+		if _load_table_file(file_path):
+			imported_count += 1
+	
+	_update_status("批量导入完成: %d 个文件" % imported_count)
+
+## 批量导出
+func _on_batch_export_pressed() -> void:
+	if _loaded_tables.is_empty():
+		_update_status("没有已加载的数据表")
+		return
+	
+	var export_folder = "res://addons/GDDataForge/exported_data"
+	
+	# 确保目录存在
+	if not DirAccess.dir_exists_absolute(export_folder):
+		DirAccess.make_dir_recursive_absolute(export_folder)
+	
+	var exported_count = 0
+	for table_name in _loaded_tables.keys():
+		var table_data = _loaded_tables[table_name]
+		_current_table_name = table_name
+		_current_table = table_data.get("data", {}).duplicate(true)
+		_current_table_columns = table_data.get("columns", [])
+		_current_table_types = table_data.get("types", [])
+		
+		var export_path = export_folder + "/" + table_name + ".csv"
+		_save_table_to_file(export_path)
+		exported_count += 1
+	
+	_update_status("批量导出完成: %d 个文件" % exported_count)
+
+## ===== 热加载系统 =====
+
+## 启动热加载
+func _start_hot_load() -> void:
+	if _hot_load_enabled:
+		return
+	
+	_hot_load_enabled = true
+	_hot_load_timer = Timer.new()
+	_hot_load_timer.wait_time = HOT_LOAD_INTERVAL
+	_hot_load_timer.timeout.connect(_on_hot_load_check)
+	add_child(_hot_load_timer)
+	_hot_load_timer.start()
+	
+	# 记录初始文件修改时间
+		for table_name in _loaded_tables.keys():
+			var table = _loaded_tables[table_name]
+			var path = table.get("path", "")
+			if not path.is_empty():
+				_file_mod_times[path] = FileAccess.get_modified_time(path)
+	
+	_update_status("热加载已启动")
+
+## 热加载开关回调
+func _on_hot_load_toggled(button_pressed: bool) -> void:
+	if button_pressed:
+		_start_hot_load()
+	else:
+		_stop_hot_load()
+
+## 停止热加载
+func _stop_hot_load() -> void:
+	if not _hot_load_enabled:
+		return
+	
+	_hot_load_enabled = false
+	if _hot_load_timer:
+		_hot_load_timer.stop()
+		_hot_load_timer.queue_free()
+		_hot_load_timer = null
+	
+	_update_status("热加载已停止")
+
+## 热加载检查
+func _on_hot_load_check() -> void:
+	var modified_files: Array[String] = []
+	
+	for file_path in _file_mod_times.keys():
+		if not FileAccess.file_exists(file_path):
+			continue
+		
+		var current_time = FileAccess.get_modified_time(file_path)
+		var last_time = _file_mod_times[file_path]
+		
+		if current_time > last_time:
+			modified_files.append(file_path)
+			_file_mod_times[file_path] = current_time
+	
+	if not modified_files.is_empty():
+		_reload_modified_files(modified_files)
+
+## 重新加载已修改的文件
+func _reload_modified_files(files: Array[String]) -> void:
+	var reloaded_count = 0
+	
+	for file_path in files:
+		var table_name = file_path.get_file().get_basename()
+		
+		# 保存当前编辑状态
+		var current_data = {}
+		if _current_table_name == table_name:
+			current_data = _current_table.duplicate(true)
+		
+		# 重新加载
+		_load_table_file(file_path)
+		
+		# 如果是当前正在编辑的表，恢复光标位置等
+		if _current_table_name == table_name:
+			pass  # 可扩展：恢复选中行
+		
+		reloaded_count += 1
+	
+	if reloaded_count > 0:
+		_update_status("热加载更新: %d 个文件" % reloaded_count)
+		print("[GDDataForge] 热载了 %d 个文件" % reloaded_count)
+
+## 扫描数据文件
+func _scan_data_files(folder: String) -> Array[String]:
+	var result: Array[String] = []
+	
+	var dir = DirAccess.open(folder)
+	if not dir:
+		return result
+	
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	
+	while file_name != "":
+		if not dir.current_is_dir():
+			var ext = file_name.get_extension().to_lower()
+			if ext == "csv" or ext == "json":
+				result.append(folder + "/" + file_name)
+		file_name = dir.get_next()
+	
+	dir.list_dir_end()
+	return result
+
+## 批量合并导入（合并到当前表）
+func _on_merge_import_pressed() -> void:
+	# TODO: 实现批量合并导入
+	_update_status("批量合并导入功能开发中...")
+
+## 批量替换导出（导出所有为不同文件）
+func _on_export_all_pressed() -> void:
+	# TODO: 实现批量替换导出
+	_update_status("批量替换导出功能开发中...")
 
 ## ===== 主键/外键操作 =====
 
