@@ -27,6 +27,18 @@ var _foreign_keys: Array[Dictionary] = []  #  [{"field": "type_id", "target_tabl
 # 格式: {column_name: "PRIMARY_KEY|REQUIRED|UNIQUE|RANGE:1-100|REGEX:^[a-z]+$|FOREIGN:table.field"}
 var _field_validation_rules: Dictionary = {}  # {field_name: ["REQUIRED", "UNIQUE", "RANGE:1-100"]}
 
+## 搜索和过滤
+var _search_text: String = ""
+var _search_column: String = ""  # 空 = 搜索所有列
+var _filter_column: String = ""
+var _filter_value: String = ""
+var _sort_column: String = ""
+var _sort_ascending: bool = true
+var _is_filtered: bool = false
+
+## 过滤后的数据视图
+var _filtered_table: Dictionary
+
 ## 预定义校验规则枚举
 enum ValidationRuleType:
     REQUIRED = "REQUIRED"      # 必填
@@ -270,6 +282,49 @@ func _create_editor_panel() -> void:
 	btn_validate.name = "BtnValidate"
 	btn_validate.pressed.connect(_on_validate_pressed)
 	toolbar.add_child(btn_validate)
+	
+	# 添加工具栏分隔3
+	var sep3 = HSeparator.new()
+	toolbar.add_child(sep3)
+	
+	# 搜索输入框
+	var search_input = LineEdit.new()
+	search_input.name = "SearchInput"
+	search_input.custom_minimum_size.x = 150
+	search_input.placeholder_text = "搜索..."
+	search_input.text_changed.connect(_on_search_text_changed)
+	toolbar.add_child(search_input)
+	
+	# 搜索列选择
+	var search_col_option = OptionButton.new()
+	search_col_option.name = "SearchColumnOption"
+	search_col_option.custom_minimum_size.x = 80
+	search_col_option.add_item("全部列", 0)
+	search_col_option.item_selected.connect(_on_search_column_changed)
+	toolbar.add_child(search_col_option)
+	
+	# 过滤列选择
+	var filter_col_option = OptionButton.new()
+	filter_col_option.name = "FilterColumnOption"
+	filter_col_option.custom_minimum_size.x = 80
+	filter_col_option.add_item("不过滤", 0)
+	filter_col_option.item_selected.connect(_on_filter_column_changed)
+	toolbar.add_child(filter_col_option)
+	
+	# 过滤值输入
+	var filter_value_input = LineEdit.new()
+	filter_value_input.name = "FilterValueInput"
+	filter_value_input.custom_minimum_size.x = 100
+	filter_value_input.placeholder_text = "过滤值..."
+	filter_value_input.text_changed.connect(_on_filter_value_changed)
+	toolbar.add_child(filter_value_input)
+	
+	# 清除过滤按钮
+	var btn_clear_filter = Button.new()
+	btn_clear_filter.text = "清除"
+	btn_clear_filter.name = "BtnClearFilter"
+	btn_clear_filter.pressed.connect(_on_clear_filter_pressed)
+	toolbar.add_child(btn_clear_filter)
 	
 	# 导入按钮
 	var btn_import = Button.new()
@@ -591,7 +646,127 @@ func _on_delete_foreign_key_pressed() -> void:
 	_update_status("已删除外键引用")
 	table_modified.emit(_current_table_name)
 
-## ===== 数据校验 =====
+## ===== 搜索和过滤 =====
+
+## 搜索文本变更
+func _on_search_text_changed(text: String) -> void:
+	_search_text = text
+	_apply_search_and_filter()
+
+## 搜索列变更
+func _on_search_column_changed(index: int) -> void:
+	if index == 0:
+		_search_column = ""
+	else:
+		_search_column = _current_table_columns[index - 1] if index - 1 < _current_table_columns.size() else ""
+	_apply_search_and_filter()
+
+## 过滤列变更
+func _on_filter_column_changed(index: int) -> void:
+	if index == 0:
+		_filter_column = ""
+	else:
+		_filter_column = _current_table_columns[index - 1] if index - 1 < _current_table_columns.size() else ""
+	_apply_search_and_filter()
+
+## 过滤值变更
+func _on_filter_value_changed(text: String) -> void:
+	_filter_value = text
+	_apply_search_and_filter()
+
+## 清除过滤
+func _on_clear_filter_pressed() -> void:
+	_search_text = ""
+	_search_column = ""
+	_filter_column = ""
+	_filter_value = ""
+	_is_filtered = false
+	
+	# 清空输入框
+	var search_input = _find_node_by_name(_editor_panel, "SearchInput")
+	if search_input and search_input is LineEdit:
+		search_input.text = ""
+	
+	var filter_input = _find_node_by_name(_editor_panel, "FilterValueInput")
+	if filter_input and filter_input is LineEdit:
+		filter_input.text = ""
+	
+	_apply_search_and_filter()
+	_update_status("已清除过滤")
+
+## 应用搜索和过滤
+func _apply_search_and_filter() -> void:
+	_filtered_table = _current_table.duplicate(true)
+	
+	var count_before = _filtered_table.size()
+	
+	# 1. 应用搜索过滤（文本搜索）
+	if not _search_text.is_empty():
+		var temp_table = {}
+		for row_id in _filtered_table.keys():
+			var row = _filtered_table[row_id]
+			var matched = false
+			
+			if _search_column.is_empty():
+				# 搜索所有列
+				for col in _current_table_columns:
+					var value = str(row.get(col, ""))
+					if _search_text.to_lower() in value.to_lower():
+						matched = true
+						break
+			else:
+				# 搜索指定列
+				var value = str(row.get(_search_column, ""))
+				if _search_text.to_lower() in value.to_lower():
+					matched = true
+			
+			if matched:
+				temp_table[row_id] = row
+		
+		_filtered_table = temp_table
+	
+	# 2. 应用列过滤（精确匹配）
+	if not _filter_column.is_empty() and not _filter_value.is_empty():
+		var temp_table = {}
+		for row_id in _filtered_table.keys():
+			var row = _filtered_table[row_id]
+			var value = str(row.get(_filter_column, ""))
+			if value == _filter_value:
+				temp_table[row_id] = row
+		_filtered_table = temp_table
+	
+	# 3. 应用排序
+	_apply_sort()
+	
+	_is_filtered = _filtered_table.size() != _current_table.size()
+	
+	# 刷新视图
+	_refresh_table_view()
+	
+	# 更新状态
+	var count_after = _filtered_table.size()
+	if _is_filtered:
+		_update_status("显示 %d / %d 条记录" % [count_after, count_before])
+	else:
+		_update_status("共 %d 条记录" % count_before)
+
+## 应用排序
+func _apply_sort() -> void:
+	if _sort_column.is_empty():
+		return
+	
+	# 简单排序实现
+	var sorted_keys = _filtered_table.keys()
+	sorted_keys.sort()
+	
+	if not _sort_ascending:
+		sorted_keys.reverse()
+	
+	var temp_table = {}
+	for key in sorted_keys:
+		temp_table[key] = _filtered_table[key]
+	
+	_filtered_table = temp_table
 
 func _on_validate_pressed() -> void:
 	_validate_current_table()
@@ -868,7 +1043,10 @@ func _refresh_foreign_key_tree() -> void:
 func _refresh_table_view() -> void:
 	_table_view.clear()
 	
-	if _current_table.is_empty():
+	# 使用过滤后的数据（如果没有过滤则使用原始数据）
+	var table_to_show = _filtered_table if _is_filtered else _current_table
+	
+	if table_to_show.is_empty():
 		return
 	
 	# 设置列
@@ -881,8 +1059,8 @@ func _refresh_table_view() -> void:
 		_table_view.set_column_min_width(i, 100)
 	
 	# 添加数据行
-	for row_id in _current_table.keys():
-		var row_data = _current_table[row_id]
+	for row_id in table_to_show.keys():
+		var row_data = table_to_show[row_id]
 		var item = _table_view.create_item()
 		
 		# ID 列
