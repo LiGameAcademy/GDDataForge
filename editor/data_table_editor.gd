@@ -39,6 +39,149 @@ var _is_filtered: bool = false
 ## 过滤后的数据视图
 var _filtered_table: Dictionary
 
+## ===== 命令模式：撤销/重做系统 =====
+
+## 命令接口
+class ICommand:
+	var description: String
+	func execute() -> void:
+		pass
+	func undo() -> void:
+		pass
+
+## 添加行命令
+class AddRowCommand extends ICommand:
+	var table: Dictionary
+	var row_id: String
+	var row_data: Dictionary
+	
+	func _init(t: Dictionary, rid: String, rdata: Dictionary):
+		table = t
+		row_id = rid
+		row_data = rdata.duplicate(true)
+		description = "添加行: " + row_id
+	
+	func execute() -> void:
+		table[row_id] = row_data.duplicate(true)
+	
+	func undo() -> void:
+		table.erase(row_id)
+
+## 删除行命令
+class DeleteRowCommand extends ICommand:
+	var table: Dictionary
+	var row_id: String
+	var row_data: Dictionary
+	
+	func _init(t: Dictionary, rid: String):
+		table = t
+		row_id = rid
+		row_data = {}.duplicate()
+		description = "删除行: " + row_id
+	
+	func execute() -> void:
+		if table.has(row_id):
+			row_data = table[row_id].duplicate(true)
+			table.erase(row_id)
+	
+	func undo() -> void:
+		table[row_id] = row_data.duplicate(true)
+
+## 更新单元格命令
+class UpdateCellCommand extends ICommand:
+	var table: Dictionary
+	var row_id: String
+	var column: String
+	var old_value: Variant
+	var new_value: Variant
+	
+	func _init(t: Dictionary, rid: String, col: String, old: Variant, new_val: Variant):
+		table = t
+		row_id = rid
+		column = col
+		old_value = old
+		new_value = new_val
+		description = "修改 %s.%s" % [row_id, column]
+	
+	func execute() -> void:
+		if table.has(row_id):
+			table[row_id][column] = new_value
+	
+	func undo() -> void:
+		if table.has(row_id):
+			table[row_id][column] = old_value
+
+## 添加列命令
+class AddColumnCommand extends ICommand:
+	var columns: Array[String]
+	var types: Array[String]
+	var col_name: String
+	var col_type: String
+	var default_value: Variant
+	
+	func _init(cols: Array[String], types: Array[String], cn: String, ct: String):
+		columns = cols
+		types = types
+		col_name = cn
+		col_type = ct
+		default_value = ""
+		description = "添加列: " + col_name
+	
+	func execute() -> void:
+		columns.append(col_name)
+		types.append(col_type)
+	
+	func undo() -> void:
+		var idx = columns.find(col_name)
+		if idx >= 0:
+			columns.remove_at(idx)
+			types.remove_at(idx)
+
+## 删除列命令
+class DeleteColumnCommand extends ICommand:
+	var columns: Array[String]
+	var types: Array[String]
+	var idx: int
+	var col_name: String
+	var col_type: String
+	
+	func _init(cols: Array[String], types: Array[String], cn: String, ct: String):
+		columns = cols
+		types = types
+		col_name = cn
+		col_type = ct
+		idx = cols.find(cn)
+		description = "删除列: " + col_name
+	
+	func execute() -> void:
+		if idx >= 0:
+			columns.remove_at(idx)
+			types.remove_at(idx)
+	
+	func undo() -> void:
+		columns.insert(idx, col_name)
+		types.insert(idx, col_type)
+
+## 历史管理器
+var _undo_stack: Array[ICommand] = []
+var _redo_stack: Array[ICommand] = []
+var _max_history: int = 50  # 最大历史记录数
+
+## 执行命令（并添加到撤销栈）
+func _execute_command(cmd: ICommand) -> void:
+	cmd.execute()
+	_undo_stack.append(cmd)
+	_redo_stack.clear()  # 新命令清除重做栈
+	
+	# 限制历史记录数
+	if _undo_stack.size() > _max_history:
+		_undo_stack.pop_front()
+	
+	# 刷新 UI
+	_refresh_table_view()
+	_refresh_validation_rules_ui()
+	print("[GDDataForge] 已执行: " + cmd.description)
+
 ## 预定义校验规则枚举
 enum ValidationRuleType:
     REQUIRED = "REQUIRED"      # 必填
@@ -255,6 +398,26 @@ func _create_editor_panel() -> void:
 	btn_del_row.pressed.connect(_on_delete_row_pressed)
 	toolbar.add_child(btn_del_row)
 	_toolbar_buttons.append(btn_del_row)
+	
+	# 添加工具栏分隔0
+	var sep0 = HSeparator.new()
+	toolbar.add_child(sep0)
+	
+	# 撤销按钮
+	var btn_undo = Button.new()
+	btn_undo.text = "↩ 撤销"
+	btn_undo.name = "BtnUndo"
+	btn_undo.disabled = true
+	btn_undo.pressed.connect(_on_undo_pressed)
+	toolbar.add_child(btn_undo)
+	
+	# 重做按钮
+	var btn_redo = Button.new()
+	btn_redo.text = "↪ 重做"
+	btn_redo.name = "BtnRedo"
+	btn_redo.disabled = true
+	btn_redo.pressed.connect(_on_redo_pressed)
+	toolbar.add_child(btn_redo)
 	
 	# 添加列按钮
 	var btn_add_col = Button.new()
@@ -540,10 +703,14 @@ func _add_row_with_dialog() -> void:
 	for col in _current_table_columns:
 		row_data[col] = ""
 	
-	_current_table[new_id] = row_data
-	_refresh_table_view()
-	_refresh_validation_rules_ui()
-	_update_status("已添加新行: " + new_id)
+	# 使用命令模式
+	var cmd = AddRowCommand.new(_current_table, new_id, row_data)
+	_execute_command(cmd)
+	
+	# 同时添加到过滤表
+	if _filtered_table.has(new_id) or _is_filtered:
+		_filtered_table[new_id] = row_data.duplicate()
+	
 	table_modified.emit(_current_table_name)
 
 func _on_delete_row_pressed() -> void:
@@ -553,7 +720,18 @@ func _on_delete_row_pressed() -> void:
 		return
 	
 	var row_id = _table_view.get_item_text(item, 0)
-	_current_table.erase(row_id)
+	
+	# 使用命令模式
+	var cmd = DeleteRowCommand.new(_current_table, row_id)
+	_execute_command(cmd)
+	
+	# 同时删除过滤表中的行
+	if _filtered_table.has(row_id):
+		_filtered_table.erase(row_id)
+	
+	_refresh_table_view()
+	_update_status("已删除行: " + row_id)
+	table_modified.emit(_current_table_name)
 	_refresh_table_view()
 	_refresh_validation_rules_ui()
 	_update_status("已删除行: " + row_id)
@@ -564,8 +742,14 @@ func _on_add_column_pressed() -> void:
 	var col_name = "column_%d" % (_current_table_columns.size() + 1)
 	var col_type = "string"
 	
-	_current_table_columns.append(col_name)
-	_current_table_types.append(col_type)
+	# 使用命令模式
+	var cmd = AddColumnCommand.new(
+		_current_table_columns, 
+		_current_table_types, 
+		col_name, 
+		col_type
+	)
+	_execute_command(cmd)
 	
 	# 为现有行添加空值
 	for row_id in _current_table.keys():
@@ -582,8 +766,16 @@ func _on_delete_column_pressed() -> void:
 		return
 	
 	var col_name = _current_table_columns.back()
-	_current_table_columns.erase(_current_table_columns.size() - 1)
-	_current_table_types.erase(_current_table_types.size() - 1)
+	var col_type = _current_table_types.back()
+	
+	# 使用命令模式
+	var cmd = DeleteColumnCommand.new(
+		_current_table_columns,
+		_current_table_types,
+		col_name,
+		col_type
+	)
+	_execute_command(cmd)
 	
 	# 删除所有行的该列数据
 	for row_id in _current_table.keys():
@@ -693,6 +885,51 @@ func _on_clear_filter_pressed() -> void:
 	
 	_apply_search_and_filter()
 	_update_status("已清除过滤")
+
+## ===== 撤销/重做 =====
+
+## 撤销
+func _on_undo_pressed() -> void:
+	if _undo_stack.is_empty():
+		_update_status("没有可撤销的操作")
+		return
+	
+	var cmd = _undo_stack.back()
+	cmd.undo()
+	_undo_stack.pop_back()
+	_redo_stack.append(cmd)
+	
+	_update_undo_redo_buttons()
+	_refresh_table_view()
+	_update_status("已撤销: " + cmd.description)
+
+## 重做
+func _on_redo_pressed() -> void:
+	if _redo_stack.is_empty():
+		_update_status("没有可重做的操作")
+		return
+	
+	var cmd = _redo_stack.back()
+	cmd.execute()
+	_redo_stack.pop_back()
+	_undo_stack.append(cmd)
+	
+	_update_undo_redo_buttons()
+	_refresh_table_view()
+	_update_status("已重做: " + cmd.description)
+
+## 更新撤销/重做按钮状态
+func _update_undo_redo_buttons() -> void:
+	var undo_btn = _find_node_by_name(_editor_panel, "BtnUndo")
+	var redo_btn = _find_node_by_name(_editor_panel, "BtnRedo")
+	
+	if undo_btn and undo_btn is Button:
+		undo_btn.disabled = _undo_stack.is_empty()
+		undo_btn.text = "↩ 撤销 (%d)" % _undo_stack.size() if not _undo_stack.is_empty() else "↩ 撤销"
+	
+	if redo_btn and redo_btn is Button:
+		redo_btn.disabled = _redo_stack.is_empty()
+		redo_btn.text = "↪ 重做 (%d)" % _redo_stack.size() if not _redo_stack.is_empty() else "↪ 重做"
 
 ## 应用搜索和过滤
 func _apply_search_and_filter() -> void:
